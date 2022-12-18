@@ -1,0 +1,34 @@
+select * from funcionario left join departamento on funcionario.coddepto = departamento.coddepto
+-- left traz todas as ocorrencias da tabela a esquerda, no caso funcionario
+
+select * from departamento left join funcionario on funcionario.coddepto = departamento.coddepto
+-- left traz todas as ocorrencias da tabela a esquerda do left, no caso departamento
+
+* o mesmo vale pro right
+
+
+
+select * from departamento full join funcionario on funcionario.coddepto = departamento.coddepto
+-- full traz todas as ocorrencias, como se fosse left e right juntos
+
+
+UNION: une resultados de varias consultas 
+O operador UNION ALL tem a mesma função do UNION, ou seja, ele combina os resultados de duas ou mais queries, 
+a diferença é que ele mantém os valores duplicados de cada SELECT
+
+*colunas usadas nas consultas com union devem ser do mesmo tipo, e os selects devem buscar a mesma quantidade de colunas
+
+select * from funcionario where coddepto = 2
+union
+select * from departamento
+
+erro: quantidade de colunas diferente
+select nomempresa from empresa
+union
+select nome, nomequipe from jogador
+
+erro: tipos de colunas diferente
+select nomempresa from empresa
+union
+select idade from jogador
+

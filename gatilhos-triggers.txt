@@ -1,0 +1,102 @@
+GATILHOS:
+
+CREATE OR REPLACE FUNCTION nomedafuncao(parâmetros)
+RETURNS tipo
+AS $$
+...
+$$
+LANGUAGE 'plpgsql';
+
+As variáveis usadas internamente no procedimento devem ser declaradas após a palavra DECLARE
+Instruções entre BEGIN e END
+
+condicionais:
+IF expressão_booleana THEN
+    instruções
+ELSE
+    instruções
+END IF;
+
+IF numero = 0 THEN
+    resultado := 'zero';
+ELSIF numero > 0 THEN
+    resultado := 'positivo';
+ELSIF numero < 0 THEN
+    resultado := 'negativo';
+ELSE
+    -- hmm, a única outra possibilidade é que o número seja nulo
+    resultado := 'NULL';
+END IF;
+
+loops:
+LOOP
+ instruções
+END LOOP;
+LOOP
+ instruções
+EXIT WHEN condição;
+END LOOP;
+WHILE condição LOOP
+ instruções
+END LOOP;
+FOR nome IN [ REVERSE ] condição .. condição LOOP
+ instruções
+END LOOP;
+
+
+docs: https://pgdocptbr.sourceforge.io/pg80/plpgsql.html
+
+
+
+
+
+
+1)Função que receba dois parâmetros numéricos e retorne a sua soma.
+2)Função que calcule a média aritmética das 2 notas de um aluno retornando
+uma mensagem de "Aprovado", caso a média seja igual ou superior a 7, ou
+"reprovado", caso contrário.
+3)Função que ao receber o número, retorne o texto por extenso.
+Ex.: FuncExtenso(3) => três. (De um a três, maior que isto, retornar “não sei”)
+4) Função que receba um valor numérico e retorne o valor acrescido de 10%
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+
+
+
+
+GATILHOS:
+São ações especificadas pelos usuários, e que são executadas automaticamente quando ocorrer alguma operação que cause a modificação dos dados de uma tabela.
+São uma forma de implementar “regras de negócio” a serem controladas pelo próprio SGBD.
+* Se o gatilho for disparado depois (AFTER) as alterações feitas são visíveis para o gatilho
+
+- Por Linha (FOR EACH ROW)
+O código do Gatilho é executado a cada alteração em determinada linha.
+Por exemplo, um UPDATE em uma tabela X com 10 linhas, faz com que o
+Gatilho seja executado 10 vezes.
+- Por Comando (FOR STATEMENT)
+O código do Gatilho é executado somente uma vez, por comando. No
+exemplo acima, para as mesmas 10 linhas, o Gatilho seria executado uma
+única vez.
+
+Os procedimentos que servem como gatilho para o PostgreSQL devem retornar o tipo especial TRIGGER 
+CREATE FUNCTION nomeFuncao() RETURNS TRIGGER AS $$ ....
+
+Quando uma função é chamada por um gatilho, diversas variáveis especiais são criadas, dentre estas estão:
+– NEW – refere-se aos valores associados a uma nova linha a ser inserida ou aos
+novos valores de uma linha já existente
+– OLD – refere-se aos valores associados a uma linha que acabou de ser
+removida ou aos antigos valores de uma linha já existente
+
+ISSO Vale apenas para gatilhos “por linha”
+
+
+Eventualmente, pode ser necessário desfazer os efeitos de uma instrução (Regra de Negócio)
+RAISE EXCEPTION Estará no código do procedimento associado ao gatilho!
+RAISE EXCEPTION 'Este gatilho não permite a conclusão do comando';
+dessa forma nao deixa inserir novo dado
