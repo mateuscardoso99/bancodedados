@@ -1,0 +1,196 @@
+SELECT
+    *
+FROM
+    tabela1 AS T
+WHERE
+    coluna1 IN
+    (
+        SELECT
+            coluna2
+        FROM
+            tabela2 AS T2
+        WHERE
+            T.id = T2.id
+    )
+
+a consulta mais interna (dentro dos parenteses) executa primeiro e retorna pra consulta principal, ou seja, uma consulta dentro do resultado de outra consulta
+
+
+Existem algumas formas de utilizar subqueries. Neste artigo abordaremos os seguintes meios:
+
+Subquery como uma nova coluna da consulta (SELECT AS FIELD);
+Subquery como filtro de uma consulta (utilizando IN, EXISTS ou operadores de comparação);
+Subquery como fonte de dados de uma consulta principal (SELECT FROM SELECT).
+
+/////////////////////////
+
+
+exemplo bd:
+projetos(id, titulo, data, url)
+usuarios(id,nome,email,senha)
+comentarios(id, comentario, data, id_usuario, id_projeto)
+likes_por_projeto(id_projeto, id_usuario)
+likes_por_comentario(id_comentario, id_usuario)
+
+
+
+////////////////////////////////
+
+
+SUBQUERY COMO UMA NOVA COLUNA DA CONSULTA (SELECT AS FIELD):
+
+busca título de todos os projetos cadastrados e adicionaremos uma coluna com a quantidade de comentários existentes em cada projeto, 
+realizando assim uma consulta principal na tabela projetos e uma subconsulta na tabela comentarios, que gerará uma nova coluna:
+
+SELECT
+    P.titulo,
+    (SELECT
+        COUNT(C.id_projeto)
+      FROM
+        comentarios C
+      WHERE
+        C.id_projeto = P.id
+    ) AS Quantidade_Comentarios
+FROM projetos P
+GROUP BY P.id
+
+** tabela projetos é usado na consulta interna.
+
+adicionando valor total de likes recebidos por projeto:
+
+SELECT
+    P.titulo,
+
+    --primeira subconsulta pra trazer total de comentarios
+    (SELECT
+         COUNT(C.id_projeto)
+      FROM
+         comentarios C
+      WHERE
+          C.id_projeto = P.id
+    ) AS Quantidade_Comentarios,
+
+    --segunda subconsulta pra trazer total de likes por projeto
+    (SELECT
+        COUNT(LP.id_projeto)
+      FROM
+         likes_por_projeto LP
+      WHERE
+         LP.id_projeto = P.id
+    ) AS Quantidade_Likes
+
+FROM projetos P
+GROUP BY P.id
+
+**Sempre após a criação de uma subquery como nova coluna será necessário definir um nome para esta coluna, através da palavra reservada AS. 
+**Uma subquery como nova coluna deve retornar apenas uma única coluna com um único valor
+
+
+
+/////////////////////////
+
+
+
+SUBQUERY COMO FILTRO DE UMA NOVA CONSULTA:
+
+Outro exemplo da utilização de subqueries é fazendo filtros no resultado de outras consultas.
+Para esse modelo podemos utilizar as cláusulas IN, EXISTS ou operadores de comparação, como =, >=, <=, dentre outros.
+Para exemplificar buscaremos todos os projetos que possuam algum comentário, ou seja, uma consulta principal na tabela projetos,
+e filtrar o resultado com base no resultado da subconsulta na tabela comentarios.
+
+SELECT
+    P.id,
+    P.titulo,
+    P.data
+FROM
+    projetos P
+WHERE
+    P.id IN //podia usar EXISTS que teria o mesmo resultado
+    (
+        SELECT
+            C.id_projeto
+        FROM
+            comentarios C
+        WHERE
+            P.id = C.id_projeto
+    );
+
+Observe no resultado acima que vieram apenas informações da tabela projetos, mas que foram filtradas com base em uma pesquisa pelo ID do projeto na tabela comentarios.
+Cada projeto listado neste resultado é um projeto que possui algum comentário
+
+Observe que na query acima a consulta principal é feita na tabela projetos, mas que em seguida utilizamos a cláusula WHERE para realizar um filtro na seleção,
+definindo através da cláusula IN que o valor da coluna ID deve estar incluso no resultado da subconsulta realizada, que no caso é feita na tabela comentarios.
+
+** Uma subquery utilizada como filtro de uma consulta principal pode retornar N valores, porém, apenas uma única coluna.
+
+
+
+Buscaremos agora o título e a data do último projeto que recebeu likes, ou seja, uma consulta principal na tabela projetos com um filtro na tabela likes:
+SELECT
+    P.titulo,
+    P.data
+FROM
+    projetos P
+WHERE
+    P.id = (SELECT
+      MAX(LP.id_projeto)
+    FROM
+      likes_por_projeto LP);
+
+Observe que na query acima a consulta principal é feita na tabela projetos e o filtro realizado através da cláusula WHERE é que o ID do 
+projeto seja IGUAL ao valor retornado pela subquery, que busca pelo MAIOR valor de ID do projeto na tabela likes_por_projeto
+
+
+
+////////////////
+
+
+
+SUBQUERY COMO FONTE DE DADOS DE UMA CONSULTA PRINCIPAL:
+
+Este outro formato faz com que o resultado de uma subquery seja utilizado como tabela fonte de dados de uma consulta principal.
+Para exemplificar esse modelo realizaremos primeiro a query que servirá como fonte de dados para a consulta principal
+
+SELECT
+    P.id,
+    P.titulo,
+    (SELECT
+         COUNT(C.id_projeto)
+      FROM
+         comentarios C
+      WHERE
+         C.id_projeto = P.id
+    ) AS Quantidade_Comentarios
+FROM projetos P
+
+
+Com base no resultado acima, selecionaremos com o código abaixo apenas o projeto que teve a quantidade de comentários maior de 2,
+dessa forma, utilizaremos a query acima como fonte de dados.
+
+SELECT
+    F.titulo,
+    F.Quantidade_Comentarios
+FROM
+    (SELECT
+        P.id,
+        P.titulo,
+
+        (SELECT
+            COUNT(C.id_projeto)
+        FROM
+            comentarios C
+        WHERE
+            C.id_projeto = P.id
+        ) AS Quantidade_Comentarios
+
+      FROM
+         projetos P
+    ) as F
+WHERE
+    F.Quantidade_Comentarios > 2
+
+Observe que na query acima a consulta principal solicita através do FROM as colunas titulo, Quantidade_Comentarios da fonte de dados 
+baseada em uma outra consulta, e por fim, realiza um filtro no resultado através da cláusula WHERE para buscar somente aqueles projetos 
+com a quantidade de comentários maior que 2.
+**Sempre após a criação de uma subquery como fonte de dados de uma consulta principal será necessário definir um nome 
+para esta fonte de dados, através da palavra reservada AS
