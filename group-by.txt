@@ -1,0 +1,25 @@
+O comando GROUP BY é usado para agregar valores com base em suas semelhanças. Ele geralmente é usado junto de funções de agregação no SELECT, tais como:
+COUNT, SUM, AVG, MIN, MAX
+
+ex:
+SELECT uf, COUNT(id) FROM pessoas GROUP BY uf
+No código acima estamos contando quantos registros existem na tabela “pessoas” agrupados pelo campo uf
+
+SELECT uf, SUM(idade) FROM pessoas GROUP BY uf
+Já no exemplo acima, estamos somando as idades de todas as pessoas, agrupando-as por UF
+
+
+É possível agrupar mais de uma coluna no GROUP BY, inclusive com operações de agregação diferentes, como mostra o exemplo abaixo:
+
+SELECT uf, sexo, avg(idade) AS media_idade, count(id) AS total_pessoas FROM pessoas GROUP BY uf, sexo
+
+Neste caso estamos extraindo a média de idade e contando quantas pessoas existem em cada grupo de UF e sexo, o resultado terá 1 linha para cada grupo composto.
+Por exemplo, no UF de valor BA existem pessoas do sexo feminino e masculino, portanto o estado fará parte de dois grupos: BA + Feminino e BA + Masculino:
+
+resultado:
+uf	sexo	media_idade	total_pessoas
+AC	M	43		3
+BA	M	38		3
+BA	F	44		2
+RS	F	39		5
+RS	M	42		3
