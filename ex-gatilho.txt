@@ -1,0 +1,107 @@
+-- Considere a base de dados apresentada. Uma situação que não faz sentido é a de um mesmo aluno aprovado em
+-- uma mesma disciplina em semestres distintos.
+-- Assim, NÃO DEVE SER possível existir no histórico do aluno John Smith, por exemplo, os seguintes dados:
+-- Semestre: 2014/1 Disciplina: CPM123456 Nota:7,00
+-- Semestre: 2015/1 Disciplina: CPM123456 Nota:7,50
+-- A partir disto, escreva a(s) função(ões) e gatilho(s) para evitar que exista na base o registro de um aluno aprovado
+-- em uma mesma disciplina em semestres diferentes. Considere que a nota mínima para aprovação é 7,00.
+
+CREATE TABLE Unidade (
+codunidade int,
+nomunidade varchar(100),
+PRIMARY KEY(codunidade));
+
+CREATE TABLE Area (
+codarea int,
+nomarea varchar(50),
+PRIMARY KEY (codarea));
+
+CREATE TABLE Curso (
+codcurso int,
+nomcurso varchar(100),
+codunidade int,
+codarea int,
+PRIMARY KEY (codcurso),
+FOREIGN KEY(codarea) REFERENCES Area(codarea),
+FOREIGN KEY(codunidade) REFERENCES Unidade(codunidade));
+
+CREATE TABLE Aluno (
+codaluno int,
+nomaluno varchar(100),
+codcurso int,
+PRIMARY KEY (codaluno),
+FOREIGN KEY(codcurso) REFERENCES Curso (codcurso));
+
+CREATE TABLE Disciplina (
+coddisci int,
+nomdisci varchar(50),
+PRIMARY KEY (coddisci));
+
+CREATE TABLE historico (
+codaluno int,
+coddisci int,
+semestre int,
+nota numeric(5,2),
+PRIMARY KEY (codaluno,coddisci,semestre),
+FOREIGN KEY(codaluno) REFERENCES Aluno (codaluno),
+FOREIGN KEY(coddisci) REFERENCES Disciplina (coddisci));
+
+insert into area(codarea,nomarea) values(1,'exatas');
+insert into unidade(codunidade,nomunidade) values(1,'unidade1');
+insert into curso(codcurso,nomcurso,codunidade,codarea) values(1,'si',1,1);
+insert into aluno(codaluno,nomaluno,codcurso) values(1,'joao',1);
+insert into aluno(codaluno,nomaluno,codcurso) values(2,'maria',1);
+insert into disciplina(coddisci,nomdisci) values(1,'poo');
+insert into disciplina(coddisci,nomdisci) values(2,'rh');
+insert into historico(codaluno,coddisci,semestre,nota) values(1,1,7,7);
+
+
+
+-- AFTER INSERT/UPDATE
+CREATE FUNCTION procedimento_funcao() returns TRIGGER
+AS $$
+DECLARE variavel int;
+BEGIN
+	--codigo
+	select count(*) into variavel 
+		from aluno, historico, disciplina where aluno.codaluno=historico.codaluno 
+		and historico.coddisci = disciplina.coddisci
+		and historico.nota >= 7
+		and disciplina.coddisci = NEW.coddisci;
+		
+	IF variavel > 1
+		THEN RAISE EXCEPTION 'aluno já aprovado nessa disciplina';
+	END IF;
+	RETURN NEW;
+END;
+$$
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER gatilho AFTER update or insert ON historico FOR EACH ROW EXECUTE PROCEDURE procedimento_funcao();
+
+
+				
+				
+--BEFORE INSERT/UPDATE			
+CREATE FUNCTION procedimento_funcao2() returns TRIGGER
+AS $$
+DECLARE variavel int;
+BEGIN
+	--codigo
+	select count(*) into variavel 
+		from aluno, historico, disciplina where aluno.codaluno=historico.codaluno 
+		and historico.coddisci = disciplina.coddisci
+		and historico.nota >= 7
+		and disciplina.coddisci = NEW.coddisci;
+		
+	IF variavel > 0
+		THEN RAISE EXCEPTION 'aluno já aprovado nessa disciplina';
+	END IF;
+	RETURN NEW;
+END;
+$$
+LANGUAGE 'plpgsql';
+
+CREATE TRIGGER gatilho2 BEFORE update or insert ON historico FOR EACH ROW EXECUTE PROCEDURE procedimento_funcao2();
+
+
