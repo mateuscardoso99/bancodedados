@@ -264,3 +264,5 @@ na consulta encadeada se a tabela produto tem 50 linhas essa consulta acima ser�
 então ele vai na linha 1 executa a consulta e verifica se a linha corresponde ao padrao da consulta que é not in
 depois vai na linha 2 e faz o mesmo, na linha 3 e faz o mesmo e assim por diante, nesse caso, ao todo serão 100 consultas
 */
+
+--com not exists deve-se usar variavel da consulta externa dentro da interna nas comparações
