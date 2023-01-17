@@ -171,9 +171,27 @@ select cliente.nomcli from cliente where cliente.nomcli not in(
 	where fornecedor.nomfornec = 'HZL'
 )
 
+--outra forma
+--dica: fazer primeiro na consulta interna e depois negar ela
 
+--nao precisa usar tabela de fora na consulta interna no not exists, apenas a variavel
+select nomcli from
+	cliente where codcli not in
+		(select codcli from
+		 compra, item_compra, produto, fornece, fornecedor
+		 where compra.codcompra = item_compra.codcompra
+		 and produto.codprod = item_compra.codprod
+		 and produto.codprod = fornece.codprod
+		 and fornecedor.codfornec = fornece.codfornec
+		 and fornecedor.nomfornec = 'HZL'
+		)
+		
+		
+		
+		
 --h) Listar os nomes dos produtos mais caros
 select valorprod from produto order by valorprod desc limit 3
+
 
 
 --i) Listar os nomes dos vendedores que não auxiliaram em nenhuma compra
@@ -185,6 +203,11 @@ select v.nomvend from vendedor v where not exists(
 	select v.nomvend from vendedor join compra on v.codvend = compra.codvend
 )
 
+--outra forma
+select nomvend from vendedor where not exists(select * from compra where compra.codvend = vendedor.codvend)
+
+
+
 
 --j) Criar uma visão que contenha os nomes das cidades com mais de 500 clientes
 create view viewCidades as
@@ -192,6 +215,27 @@ select cidade.nomcid, count(*) from cliente join cidade on cidade.codcid = clien
 group by cidade.nomcid having count(cidade.nomcid) > 0
 
 select * from viewCidades
+
+
+--l) Listar os nomes dos produtos que NÃO foram comprados
+select p.nomprod from produto p where not exists(select produto.nomprod from produto join item_compra on p.codprod = item_compra.codprod)
+--ou
+select produto.nomprod from produto where produto.codprod not in(select produto.codprod from produto join item_compra on produto.codprod = item_compra.codprod)
+--ou
+--nao precisa usar tabela produto na consulta interna apenas comparar com a variavel (p) com not exists
+select p.nomprod from produto p where not exists(select item_compra.codprod from item_compra where p.codprod = item_compra.codprod)
+
+
+
+--m) Listar o(s) nome(s) do(s) produto(s) mais baratos
+select produto.nomprod, produto.valorprod from produto order by produto.valorprod asc limit 3
+--ou
+select produto.nomprod from produto where produto.valorprod = (select min(valorprod) from produto)
+
+
+--n) Listar os nomes das cidades com os nomes dos clientes. Listar inclusive as cidades que não possuem clientes cadastrados. 
+select cidade.nomcid, cliente.nomcli from cidade left join cliente on cliente.codcid = cidade.codcid
+
 
 
 -------------------------------------------------------------------
@@ -205,3 +249,18 @@ join tipo on produto.codtipo = tipo.codtipo group by fornecedor.nomfornec, tipo.
 --fornecedor 1 frutas
 --fornecedor 2 frutas
 --fornecedor 2 carnes
+
+
+
+
+select p.nomprod from produto p where not exists(select item_compra.codprod from item_compra where p.codprod = item_compra.codprod)
+/*com not exists nao tem problema de na consulta interna retornar um valor de um tipo diferente da consulta externa*/
+
+
+
+select produto.nomprod from produto where produto.codprod not in(select produto.codprod from produto join item_compra on produto.codprod = item_compra.codprod)
+/*
+na consulta encadeada se a tabela produto tem 50 linhas essa consulta acima será executada pra cada linha da tabela
+então ele vai na linha 1 executa a consulta e verifica se a linha corresponde ao padrao da consulta que é not in
+depois vai na linha 2 e faz o mesmo, na linha 3 e faz o mesmo e assim por diante, nesse caso, ao todo serão 100 consultas
+*/
