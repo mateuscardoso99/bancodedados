@@ -1,9 +1,7 @@
-
 /*
 Demonstre passo a passo a aplicação de cada uma das formas normais (1FN, 2FN e 3FN).
 Depois crie as tabelas usando SQL. Usando SQL coloque o conteúdo mostrado no relatório
 dos projetos de pesquisa. Depois execute as instruções SQL solicitadas
-
 Projetos de Pesquisa
 Cód. professor: 001 Nome professor: Fulano de Tal
 	Cód. projeto Nome projeto Número de bolsistas do projeto Horas do professor no projeto
@@ -13,7 +11,7 @@ Cód. professor: 001 Nome professor: Fulano de Tal
 Cód. professor: 002 Nome professor: Beltrano de Tal
 	Cód. projeto Nome projeto Número de bolsistas do projeto Horas do professor no projeto
 		100 		Projeto100 				25 								1h
- 		200			Projeto200 				50								3h
+ 		200		Projeto200 				50								3h
 
 Cód. professor: 003 Nome professor: Siclano de Tal
 	Cód. projeto Nome projeto Número de bolsistas do projeto Horas do professor no projeto
@@ -21,20 +19,22 @@ Cód. professor: 003 Nome professor: Siclano de Tal
  		300 		Projeto300 				40								5h
 
 
+Não normalizado:
+(codprofessor, nomeprofessor, codproj, nomeproj, num_bolsistas, hrs_prof) pk: codprofessor, codproj
+
 1FN:
 (codprofessor, nomeprofessor) pk: codprofessor
 (codproj, codprofessor, nomeproj, num_bolsistas, hrs_prof) pk: codproj, codprofessor
 
 2FN:
 (codprofessor, nomeprofessor) pk: codprofessor
-(codproj, codprofessor, num_bolsistas, hrs_prof) pk: codproj, codprofessor
-(codproj, nomeproj) pk: codproj
+(codproj, codprofessor, hrs_prof) pk: codproj, codprofessor
+(codproj, nomeproj, num_bolsistas) pk: codproj
 
 3FN:
 nada a fazer
-
-
 */
+
  
 
 
