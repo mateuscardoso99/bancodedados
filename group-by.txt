@@ -23,3 +23,36 @@ BA	M	38		3
 BA	F	44		2
 RS	F	39		5
 RS	M	42		3
+
+
+
+GROUP BY incorreto:
+Problema:
+Ao usar uma cláusula GROUP BY, cada campo na lista SELECT deve ser:
+
+- Um dos termos GROUP BY - neste caso, região
+- Uma função agregada - por exemplo SUM ou COUNT
+- Uma expressão baseada no acima
+No exemplo o campo name não pode ser utilizado na linha SELECT.
+
+SELECT name, region, MAX(population)
+  FROM bbc
+  GROUP BY region
+
+Em um grupo por linha, cada região aparece apenas uma vez - no entanto, em uma região típica como a África, existem vários valores de nomes diferentes. Qual deles o SQL deve escolher?
+
+Soluções:
+Remova o campo ofensivo da linha SELECT:
+SELECT região, MAX(população)
+ FROM BBC
+ GROUP BY região
+
+Adicione o campo à cláusula GROUP BY:
+SELECT nome, região, MAX(população)
+ FROM BBC
+ GROUP BY nome, região
+
+Agregar o campo ofensivo:
+SELECT MAX(nome), região, MAX(população)
+ FROM BBC
+ GROUP BY região
