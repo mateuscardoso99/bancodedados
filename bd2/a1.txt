@@ -1,0 +1,75 @@
+Questão 2 continuação... use SQL para escrever as consultas solicitadas
+1) Listar os nomes dos alunos que que NÃO são de cursos que pertencem a área denominada “SAÚDE”.
+
+select * from aluno a where a.codcurso not in (select codcurso from curso join area ar on ar.codarea = c.codarea where ar.nomarea = 'SAUDE')
+
+2) Listar os nomes dos cursos que tenham mais de 50 alunos
+
+SELECT count(*), c.nomcurso from Curso c 
+join Aluno a on a.codcurso = c.codcurso 
+GROUP by c.nomcurso
+HAVING COUNT(*) > 50
+
+3) Listar quantos alunos fizeram a disciplina denominada Banco de Dados I no semestre 2021/2 e tiraram nota menor do que 7,00
+
+SELECT count(*) from Histórico h 
+join Aluno a on a.codaluno = h.codaluno 
+join Disciplina d on d.coddisci = h.coddisci
+where h.semestre = 2021/2
+and d.nomdisci = 'Banco de Dados I'
+and h.nota > 7
+
+4) Listar os nomes do(s) aluno(s) que tiraram a menor nota da disciplina cujo código é 114512 no semestre de 20221
+
+SELECT min(h.nota), a.nomaluno from Histórico h 
+join Aluno a on a.codaluno = h.codaluno 
+join Disciplina d on d.coddisci = h.coddisci
+where h.semestre = 20221
+and d.d.coddisci = 114512 
+GROUP by a.nomaluno
+
+-----------------------------
+
+
+Considere a hierarquia das áreas de conhecimento mostradas a seguir. Sobre cada área deseja-se armazenar o
+código e o nome. Exemplificando, note que a área 1.03.03.00-6 - Metodologia e Técnicas da Computação que é
+subárea da área 1.03.00.00-7 - Ciência da Computação. Já a área 1.03.03.01-4 - Linguagens de Programação, a
+área 1.03.03.02-2 - Engenharia de Software e a área 1.03.03.03-0 - Banco de Dados são 3 subáreas da área
+1.03.03.00-6 - Metodologia e Técnicas da Computação.
+A partir disto:
+- Elabore um ER para um banco de dados que possibilite armazenar estas áreas e o relacionamento entre
+elas (usar auto-relacionamento).
+- Escreva as instruções SQL para CRIAR a(s) tabela(s) a partir do Modelo ER e INSERIR os dados
+mostrados na hierarquia a seguir.
+
+1.03.00.00-7 - Ciência da Computação
+	1.03.01.00-3 Teoria da Computação
+		1.03.01.01-1 Computabilidade e Modelos de Computação
+		1.03.01.02-0 Linguagem Formais e Autômatos
+	1.03.02.00-0 Matemática da Computação
+		1.03.02.01-8 Matemática Simbólica
+		1.03.02.02-6 Modelos Analíticos e de Simulação
+	1.03.03.00-6 - Metodologia e Técnicas da Computação
+		1.03.03.01-4 - Linguagens de Programação
+		1.03.03.02-2 - Engenharia de Software
+		1.03.03.03-0 - Banco de Dados
+
+create table area(
+ codigo int primary key,
+ nome varchar(50),
+ area_mae int,
+ foreign key(area_mae) references area(codigo)
+);
+
+insert into area(codigo, nome, area_mae) values(1.03.00.00-7, Ciência da Computação, null);
+insert into area(codigo, nome, area_mae) values(1.03.01.00-3, Teoria da Computação, 1.03.00.00-7);
+insert into area(codigo, nome, area_mae) values(1.03.01.01-1, Computabilidade e Modelos de Computação, 1.03.01.00-3);
+insert into area(codigo, nome, area_mae) values(1.03.01.02-0, Linguagem Formais e Autômatos, 1.03.01.00-3);
+insert into area(codigo, nome, area_mae) values(1.03.02.00-0, Matemática da Computação, 1.03.00.00-7);
+insert into area(codigo, nome, area_mae) values(1.03.02.01-8, Matemática Simbólica, 1.03.02.00-0);
+insert into area(codigo, nome, area_mae) values(1.03.02.02-6, Modelos Analíticos e de Simulação, 1.03.02.00-0);
+insert into area(codigo, nome, area_mae) values(1.03.03.00-6, Metodologia e Técnicas da Computação, 1.03.00.00-7);
+insert into area(codigo, nome, area_mae) values(1.03.03.01-4, Linguagens de Programação, 1.03.03.00-6);
+insert into area(codigo, nome, area_mae) values(1.03.03.02-2, Engenharia de Software, 1.03.03.00-6);
+insert into area(codigo, nome, area_mae) values(1.03.03.03-0, Banco de Dados, 1.03.03.00-6);
+
