@@ -1,0 +1,112 @@
+**arquitetura ansi/sparc: 
+-Esquema Externo ou de Visões
+-Esquema Lógico
+-Esquema Interno
+
+ideia é abstrair para que não seja preciso mexer na estrutura interna do SGBD, arquivos internos etc.
+
+**Existe uma área da memória principal reservada para os blocos do disco com os dados (buffer)
+
+**Unidade básica de armazenamento é 1 bit
+-A forma de representar este bit é por meio da magnetização da superfície do disco
+– Uma camada de partículas de ferro sobre um disco de alumínio ou vidro
+– Um eletroímã alinha as partículas de ferro de forma a representar bits
+
+**Os dados estão distribuídos no disco em trilhas (centenas/milhares) e setores
+-Setores são agrupados em blocos (clusters)
+-Este bloco é o menor espaço que pode ser ocupado por um arquivo!
+–Tamanho entre 512 e 4096 bytes (depende do SO)
+–O sistema operacional irá ler/gravar blocos do disco
+
+**Arquivo: sequência de registros.
+**Registro: uma coleção de valores ou itens relacionados
+-Registro aluno: 12000#Fulano de Tal#27061990
+
+**Cada item corresponde a 1 ou vários bytes e corresponde a um campo de dado
+**Registros dos arquivos devem ser alocados aos blocos do disco
+**Um bloco do disco é a unidade de transferência de dados entre a memória e o disco
+
+**Caching (Bufferização) de blocos de disco
+-Melhorar performance: Manter blocos do disco na memória principal
+-Parte da memória principal é reservada para dados lidos do banco de dados
+
+Tipos de Arquivos:
+– Desordenados ou Heap
+Os registros não estão ordenados
+Inserir é fácil, Sempre inserir no final (ou onde existir espaço)
+Pesquisa não é eficiente (todos registros devem ser lidos)
+Alteração – implica em localizar o(s) registro(s)
+Exclusão: marcar excluído é normalmente mais eficiente
+
+– Registros Ordenados
+Registros estão ordenados segundo um critério: Campo ou conjunto de campos (campo de classificação) ex: nome do aluno, nome do curso e nome do aluno
+Selecionar registros é mais rápido: Pesquisa binária
+Incluir e excluir registros é um problema, precisa varrer tudo o que pode demorar
+
+– Arquivos com Hashing
+Chamados de Arquivos hash ou Arquivos com acesso direto
+Cada registro é armazenado em uma área que é determinada pelo uso de uma função (função hash - função de cálculo de endereço)
+ao invés de inserir no final do arquivo e precisar varrer tudo, ou inserir ordenado, é separado um conjunto de blocos e existe uma função que aponta pra um bloco de disco onde ele será armazenado, ao buscar o dado vai direto no bloco
+fh(chave) = chave MOD N: função recebe a chave e calcula o módulo(resto da divisão) da chave pelo N (número de endereços)
+fh(7) = 7 MOD 6 = 1
+fh(25) = 25 MOD 6 = 1 nesse caso ia pro mesmo endereço do registro acima sobrescrevendo-o, nesse caso cria-se uma nova tabela (area de extensão) e faz o endereço 1 que tem a chave 7 ter um ponteiro pra area de extensão onde tem a chave 25
+
+----------------------------------------
+
+2) Considere os registros apresentados a seguir. Considere que eles são incluídos em um
+arquivo na ordem em que são mostrados.
+
+Código Nome
+0020 Paulo
+0034 André
+0039 Ana
+0024 Joana
+0019 Vitor
+0096 Claudia
+0092 Davi
+0105 Sandra
+
+Mostre como ficariam organizados estes registros em um arquivo com hashing. Para o
+arquivo com hashing , considere que a função hashing é fh(chave) = chave MOD N.
+Nesta função, a chave é o código mostrado no registro. Ainda para o arquivo de hashing
+considere que existem 9 endereços disponíveis e mais uma área de área de extensão com
+4 posições, conforme mostrado abaixo.
+
+fh(0020) = 0020 MOD 9 = 2
+fh(0034) = 0034 MOD 9 = 7
+fh(0039) = 0039 MOD 9 = 3
+fh(0024) = 0024 MOD 9 = 6
+fh(0019) = 0019 MOD 9 = 1
+fh(0096) = 0096 MOD 9 = 6
+fh(0092) = 0092 MOD 9 = 2
+fh(0105) = 0105 MOD 9 = 6
+
+
+arquivo:
+endereço   registro   ponteiro
+0
+1           0019
+2           0020       1
+3           0039
+4
+5
+6           0024       0 -> (ponteiro para area de extensão de endereço 0)
+7           0034
+8
+9
+
+área de extensão:
+endereço   registro   ponteiro
+0           0096        2
+1           0092
+2           0105
+3
+
+
+
+
+
+
+
+
+
