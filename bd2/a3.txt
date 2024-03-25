@@ -1,0 +1,264 @@
+indices: oferecem caminhos de acesso aos registros dos arquivos sem afetar a organização primária
+
+indices de nível único: 
+- arquivos ordenados, Similar a adoção de índices de termos em livros
+- Um índice é definido com base em um campo do registro ou conjunto de campos (são como os termos nos índices de livros)
+- Armazena ponteiros para os registros
+
+- Índice primário
+	-Especificado sobre o campo(s) de ordenação de um arquivo (arquivo sequencial ou de registro ordenado)
+	–É possível ter somente 1 índice primário
+	-Se o dado não for encontrado no arquivo de índice será lido o arquivo de overflow e feita busca linear
+	-O maior problema é a atualização
+		- Na área de índice e na área do arquivo de dados!!
+		– Solução pode ser um arquivo de overflow
+
+- Índice Secundário
+	- Podem existir vários sobre um mesmo arquivo, Possui dois campos
+	- Campo-chave de classificação (algum campo que não seja a chave primária)
+	- Segundo campo é um ponteiro para o registro (ou bloco com os registros)
+	- Índice secundário é denso (normalmente), isto é, contém entradas para todos valores
+
+	EX:
+	nome ponteiro
+	joão   &56
+        maria  &23
+
+- Índice de hashing: função de hashing é usada para determinar onde está um registro
+	-deve ser usado como chave algo que não se repete ex: chave primária
+	-se a chave se repetir não é pra usar, ex: nome do aluno, pois HASH não suporta chaves duplicadas
+
+indice multinivel: baseado em árvores
+-maiores que a raiz pra um lado, menores pro outro
+
+Árvores B – B Trees
+-Árvores de pesquisa balanceadas (balanceada significa que todos nós folha estão em um mesmo nível) adequadas para uso em discos magnéticos ou outros dispositivos de acesso direto
+-A ordem define o número de filhos e chaves que um nó pode conter
+– Uma árvore de ordem M=3, pode possuir 3 filhos e duas chaves
+
+Árvores-B obedecem algumas condições Considerando uma árvore de ordem M:
+– Todos nós possuem no máximo M filhos;
+– Todos nós, com exceção do raiz e dos nós folha, possuem no mínimo M/2 filhos (nós folha não possuem filhos e o nó raiz pode não possuir – árvore pequena);
+– Todo nó possui no máximo M -1 chaves
+– Todo nó possui no mínimo M -1/2 chaves (o raiz é a única exceção)
+– Em cada nó as chaves estão ordenadas
+– Todos nós folha estão no mesmo nível
+
+- As inclusões de chaves serão feitas em nodos folhas, se houver espaço (se o nodo estiver dentro dos limites dados pela ordem M).
+- Se não houver espaço para inclusão da chave (nodo estando no limite máximo), deverá ocorrer a divisão do nodo, formando dois novos nodos.
+- A chave de valor intermediário deve “subir”, ou seja, ser incluída no nodo pai, com as devidas correções nos ponteiros antes e depois desta 
+chave no nodo pai (os ponteiros antes e depois agora devem apontar para os novos nodos criados). 
+O novo nodo da esquerda conterá as chaves menores que a intermediária, e o nodo da direita, as chaves maiores.
+- Se no nodo pai não houver espaço para inclusão da chave intermediária que “subiu”, o nodo pai também deverá sofrer uma divisão (mesmo procedimento)
+- Isto poderá ocasionar divisões sucessivas, podendo ocasionar a criação de uma nova raiz (quando a chave que sobe forma um novo nodo raiz pela inexistência de um nodo pai).
+
+
+-se não tiver indice o SGBD faz pesquisa sequencial
+-se frequentemente se faz busca por um campo especifico 'nome' por exemplo, é bom criar um índice pra esse campo
+
+
+-Select * from funcionario where salário > 1000,0 //melhor usar arvore B como índice
+-Select * from funcionario where código = 15, //melhor usar HASH como índice
+
+
+---------------------------------------------------------------
+
+
+Considere a árvore B mostrada abaixo. A árvore tem ordem m=5, ou seja, cada nó possui de 2 a 4 chaves. 
+Mostre como ficaria a árvore depois de inserir 92. 
+Após mostre como ficaria a árvore após inserir 95.
+
+      30,       50,      60
+      /        /   \ 	   \
+     /        /     \       \
+10,20    35,40     52,58    80, 85, 90 
+
+
+após inserir 92:
+
+      30,       50,      60
+      /        /   \ 	   \
+     /        /     \       \
+10,20    35,40     52,58    80, 85, 90, 92 -> limite 4 chaves 
+
+
+após inserir 95:
+
+      30,       50,      60,          90
+      /        /   \ 	   \           \
+     /        /     \       \           \
+10,20    35,40     52,58    80, 85      92, 95
+
+
+
+
+
+---------------------------------------------------------------
+
+
+Otimização de Consultas:
+-SQL não especifica como obter resultados
+
+-primeiro sintaxe é validada
+-uma consulta SQL é traduzida pra algebra representada por uma arvore de consulta pra poder ser otimizada
+-depois é feita uma árvore de consultas
+
+explain select * from aluno
+resultado: Seq Scan on aluno (cost=0.00)
+explicação: feita pesquisa sequencial em aluno com custo computacional = 0.00, foi feita pesquisa sequencial pois não tem índice
+
+explain select * from aluno where codaluno=1000
+resultado: Index Scan using aluno_pkey on aluno (cost=0.15
+explicação: feita pesquisa pelo índice usando a chave primaria, não foi feito pesquisa sequencial pois tem índice
+
+explain select * from aluno where nome_aluno='joao'
+resultado: Seq Scan on aluno (cost=0.00)
+explicação: feita pesquisa sequencial em aluno com custo computacional = 0.00, foi feita pesquisa sequencial pois não tem índice pra coluna nome_aluno
+
+custo computacional: qtd de blocos lidos, operações na MP etc...
+isso é crítico quando tem muitos dados nas tabelas
+
+otimização heuristica:
+-formas que o sgdb pode usar pra fazer uma consulta
+-buscando todas as combinações possíveis (plano cartesiano) e separar com base nas condições da consulta
+-outra forma: buscando todas as linhas que satisfazem uma condição, depois fazer plano cartesiano e por ultimo pegar só as linha necessárias
+-outra forma: buscando todas as linhas que satisfazem uma condição, depois ir separando e pegando as linhas de acordo com a condição da consulta, sem fazer plano cartesiano
+
+-deve-se sempre substituir plano cartesiano (todas as combinações possíveis) pela junção (join)
+-Aplicar mais cedo as operações de seleção mais restritivas
+
+
+------------------------------------------------------------------------------
+
+
+create table PARTICIPANTE
+(codparti int not null,
+nome_parti varchar (40) not null,
+idade int not null,
+primary key (codparti));
+
+create table AREA
+(codarea int not null,
+nome_area char (50),
+primary key (codarea));
+
+create table PALESTRA
+(codpales int not null,
+nome_pales varchar (40) not null,
+codarea int not null,
+vagas int not null,
+foreign key (codarea) references area (codarea),
+primary key (codpales));
+
+create table ASSISTE
+(codpales int not null,
+codparti int not null,
+foreign key (codpales) references palestra (codpales),
+foreign key (codparti) references participante (codparti),
+primary key (codpales,codparti));
+
+
+Escrever a consulta em álgebra relacional. A partir dela mostre a árvore inicial de consulta e a mais otimizada
+1) Listar os nomes das palestras que sejam da área denominada “Banco de Dados”.
+sql: SELECT nome_pales FROM PALESTRA JOIN AREA ON AREA.codarea = PALESTRA.codarea WHERE AREA.nome_area='Banco de Dados'
+
+algebra: π nome_pales
+		 (σ palestra.codarea = area.codarea ^ area.nomarea = 'banco de dados' 
+			(Palestra X Area))
+
+X = plano cartesiano
+^ = AND
+
+
+
+arvore não otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			   π nome_pales
+                  		|
+                  		|
+	σ palestra.codarea = area.codarea ^ area.nomarea = 'banco de dados' 
+				|
+				|
+				X
+			       / \
+                              /   \
+		       PALESTRA    AREA
+
+explicação: faz plano cartesiano das tabelas, gerando resultado intermediario,
+depois faz essa operação pra selecionar as linha que realmente precisam: Ϭ palestra.codarea = area.codarea ^ area.nomarea = 'banco de dados'
+depois pega só o nome
+
+
+
+
+arvore quase otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			   π nome_pales
+                  		|
+                  		|
+		  σ palestra.codarea = area.codarea
+				|
+				|
+				X
+			       / \
+                              /   σ area.nomarea = 'banco de dados' 
+                             /     \
+		       PALESTRA     AREA
+
+explicação: busca as areas com nome 'banco de dados',
+depois faz plano cartesiano do resultado com PALESTRA, gerando resultado intermediario,
+depois pega só o nome
+
+
+
+
+arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			π nome_pales
+                  		|
+                  		|
+				|
+				|
+			      [	X ] σ palestra.codarea = area.codarea
+			       / \
+                              /   σ area.nomarea = 'banco de dados' 
+                             /     \
+		       PALESTRA     AREA
+
+explicação: busca as areas com nome 'banco de dados',
+depois faz junção (join) do resultado com PALESTRA, gerando resultado intermediario,
+depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
+
+
+
+
+arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			π nome_pales
+                  		|
+                  		|
+				|
+				|
+			      [	X ] σ palestra.codarea = area.codarea
+			       / \
+           π nome_pales, codarea  π codarea
+                              /    \
+                             /    σ area.nomarea = 'banco de dados' 
+                            /        \
+		       PALESTRA      AREA
+
+explicação: busca as areas com nome 'banco de dados',
+depois faz junção (join) do resultado com PALESTRA, gerando resultado intermediario,
+depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
+
+
+
+
+
+2) Listar os nomes das áreas que tenham palestras com mais de 50 vagas oferecidas.
+3) Listar os nomes das palestras que tenham algum participante com idade superior a 80 anos
+4) Listar os nomes dos alunos que tenham 40 anos e que estejam assistindo a palestra denominada “Sistemas de Recomendação”.
+
+
+
+
