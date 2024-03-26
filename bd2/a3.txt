@@ -27,6 +27,7 @@ indices de nível único:
 - Índice de hashing: função de hashing é usada para determinar onde está um registro
 	-deve ser usado como chave algo que não se repete ex: chave primária
 	-se a chave se repetir não é pra usar, ex: nome do aluno, pois HASH não suporta chaves duplicadas
+	-se tiver diferentes registros com o mesmo código hash, vai causar um custo de desempenho pois vai percorrer todos eles pra achar o registro certo
 
 indice multinivel: baseado em árvores
 -maiores que a raiz pra um lado, menores pro outro
