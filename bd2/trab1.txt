@@ -1,7 +1,62 @@
-1) 200 blocos
+CIDADE (CODCIDADE, NOMCIDADE)
+
+MUSEU (CODMUSEU, NOMMUSEU, CODCIDADE)
+CODCIDADE REFERENCIA CIDADE
+
+QUADRO (CODQUADRO, NOMQUADRO, CODMUSEU, VALOR_ESTIMADO)
+CODMUSEU REFERENCIA MUSEU
+
+Considere a consulta apresentada na sequência (em SQL e Álgebra).
+SELECT NOMMUSEU
+FROM
+QUADRO, MUSEU
+WHERE
+QUADRO.CODMUSEU = MUSEU.CODMUSEU
+AND
+VALOR_ESTIMADO=100.000,00;
+
+ NOMMUSEU
+( VALOR_ESTIMADO=10.00,00 ^
+QUADRO.CODMUSEU = MUSEU.CODMUSEU
+(QUADRO X MUSEU))
+
+Levando em conta as estatísticas sobre a base de dados mostradas a seguir (ver estatísticas na folha 5 da prova) e a consulta
+ VALOR_ESTIMADO=10.000,00 (QUADRO).
+Calcule e descreva o cálculo do custo (isto é, o número de acessos a disco) para
+executar esta consulta, para cada uma das possibilidades apresentadas a seguir.
 
 
-2)
+1)Custo para executar a consulta varrendo toda tabela QUADRO
+200 blocos
+
+
+
+2)Custo para executar a consulta usando o índice para a coluna VALOR_ESTIMADO da tabela QUADRO
+
+Existem 500 valores distintos para VALOR_ESTIMADO da tabela QUADRO.
+Como não existe a informação sobre distribuição de frequência (frequência
+absoluta - quantas vezes cada valor aparece), é assumido que a distribuição dos dados é
+uniforme. 
+Assim, considerando as 4.000 linhas da tabela quadro, pode-se estimar que
+existem 8 linhas onde o VALOR_ESTIMADO da tabela QUADRO é igual a 10.000,00
+(4.000 linhas da tabela quadro/500 valores distintos = 8 linhas).
+
+No pior caso, cada uma destas 8 linhas está em um bloco de disco (8 acessos a
+blocos de disco).
+
+Considerando que existe um índice para VALOR_ESTIMADO e que o nível é 1
+(raiz + filhos) deverá ser feito acesso ao bloco com o nó raiz e mais um acesso ao bloco
+do nós da árvore onde estão os ponteiros para os blocos de disco com valor_estimado =
+10.000,00. Assim para o índice, são dois acessos a disco.
+
+O número de acessos é 8 (blocos com os dados) + 2 (blocos de árvore) o custo para
+executar a consulta  VALOR_ESTIMADO=10.000,00 (QUADRO) é de 10 acessos a
+disco. Pode-se considerar no cursto ainda a tabela temporárica (1 acesso a disco) o que
+totalizaria um curso de 11 acessos.
+
+Neste caso, vale a pena usar o índice e não varrer sequencialmente toda tabela (isto é,
+todos 200 blocos.
+
 indice sobre campo valor_estimado
 custo = 1 acesso pra raiz + 1 pra folha
 
