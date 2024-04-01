@@ -129,7 +129,37 @@ otimização heuristica:
 -Aplicar mais cedo as operações de seleção mais restritivas
 
 
+
+ALGEBRA: 
+- Seleção: Resultado é um subconjunto de linhas que satisfaça uma condição, Representada por σ (sigma)
+Exemplo:
+σ salário > 10.000,00 (Funcionário)
+Lista todos os funcionários com salário maior que 10.000,00
+Em SQL: Select * from funcionário where salário > 10000,00
+
+- Projeção: Resultado é um subconjunto de atributos, Representada por π (pi)
+Exemplo:
+π nomfunc (Funcionário)
+Lista todos os nomes dos funcionários
+Em SQL: Select nomfunc from funcionário
+
+- Produto Cartesiano (Cross Product): Resultado é a combinação de atributos e tuplas de duas relações, Representado por: X
+Exemplo:
+Departamento X Funcionário
+Em SQL: select * from departamento, funcionário;
+
+σ Departamento.codepto = Funcionário.codepto (Departamento × Funcionário)
+Em SQL: select * from departamento, funcionario where departamento.coddepto = funcionario.coddepto
+
+- Junção: Combina as tuplas de duas relações quando estas satisfazem uma determinada condição, Representado por: | X |
+Exemplo:
+select * from funcionario inner join departamento on funcionario.coddepto = departamento.coddepto;
+
+
+
+
 ------------------------------------------------------------------------------
+
 
 
 create table PARTICIPANTE
@@ -256,10 +286,309 @@ depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
 
 
 
-2) Listar os nomes das áreas que tenham palestras com mais de 50 vagas oferecidas.
-3) Listar os nomes das palestras que tenham algum participante com idade superior a 80 anos
-4) Listar os nomes dos alunos que tenham 40 anos e que estejam assistindo a palestra denominada “Sistemas de Recomendação”.
 
+
+
+
+
+
+
+
+
+
+
+
+2) Listar os nomes das áreas que tenham palestras com mais de 50 vagas oferecidas.
+SELECT a.nome_area from AREA a, PALESTRA p where a.codarea = p.codarea and p.vagas > 50
+
+algebra: 
+π a.nome_area ( σ palestra.codarea = area.codarea ^ palestra.vagas > 50 (PALESTRA X AREA) )
+
+X = plano cartesiano
+^ = AND
+
+
+
+arvore não otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			   π nome_area
+                  		|
+                  		|
+	σ palestra.codarea = area.codarea ^ palestra.vagas > 50
+				|
+				|
+				X
+			       / \
+                              /   \
+		       PALESTRA    AREA
+
+explicação: faz plano cartesiano das tabelas, gerando resultado intermediario,
+depois faz essa operação pra selecionar as linha que realmente precisam: σ palestra.codarea = area.codarea ^ palestra.vagas > 50
+depois pega só o nome
+
+
+arvore quase otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			   π nome_area
+                  		|
+                  		|
+		  σ palestra.codarea = area.codarea
+				|
+				|
+				X
+			       / \
+	   σ palestra.vagas > 50  \
+                             /     \
+		       PALESTRA     AREA
+
+explicação: busca as palestras com mais de 50 vagas
+depois faz plano cartesiano do resultado com AREA, gerando resultado intermediario,
+depois pega só o nome
+
+
+arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			π nome_area
+                  		|
+                  		|
+				|
+				|
+			      [	X ] σ palestra.codarea = area.codarea
+			       / \
+	   σ palestra.vagas > 50  \
+                             /     \
+		       PALESTRA     AREA
+
+explicação: busca as palestras com mais de 50 vagas,
+depois faz junção (join) do resultado com AREA, gerando resultado intermediario,
+depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
+
+
+
+
+arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			π nome_area
+                  		|
+                  		|
+				|
+				|
+			      [	X ] σ palestra.codarea = area.codarea
+			       / \
+             π nome_area, codarea  π codarea
+                              /    \
+	     σ palestra.vagas > 50  \ 
+                            /        \
+		       PALESTRA      AREA
+
+explicação: busca as palestras com mais de 50 vagas,
+depois faz junção (join) do resultado com AREA, gerando resultado intermediario,
+depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3) Listar os nomes das palestras que tenham algum participante com idade superior a 80 anos
+select PALESTRA.nome_pales from PARTICIPANTE 
+join ASSISTE on ASSISTE.codparti = PARTICIPANTE.codparti
+join PALESTRA on PALESTRA.codpales = ASSISTE.codpales
+where PARTICIPANTE.idade > 80
+
+algebra: 
+π p.nome_pales ( σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 80 (PALESTRA X ASSISTE, PARTICIPANTE X ASSISTE) )
+
+arvore não otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			     π nome_pales
+                  		   |
+                  		   |
+	σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 80
+				   |
+				   |
+				   X
+			       /   |   \
+                              /    |     \
+		       PALESTRA ASSISTE PARTICIPANTE
+
+explicação: faz plano cartesiano das tabelas, gerando resultado intermediario,
+depois faz essa operação pra selecionar as linha que realmente precisam: σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 80
+depois pega só o nome
+
+
+arvore quase otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			   π nome_pales
+                  		|
+                  		|
+ σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
+				|
+				|
+			        X
+			    /   |   \
+                           /    |     participante.idade > 80
+                          /     |       \
+		    PALESTRA ASSISTE PARTICIPANTE
+
+explicação: busca os participantes com idade maior que 80
+depois faz plano cartesiano do resultado com ASISTE, PALESTRA E PARTICIPANTE, gerando resultado intermediario,
+depois pega só o nome
+
+
+arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			   π nome_pales
+                  		|
+                  		|
+				|
+				|
+			      [ X ] σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
+			    /   |   \
+                           /    |     participante.idade > 80
+                          /     |       \
+		    PALESTRA ASSISTE PARTICIPANTE
+
+
+explicação: busca os participantes com idade maior que 80.
+depois faz junção (join) do resultado com ASISTE, PALESTRA E PARTICIPANTE, gerando resultado intermediario,
+depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
+
+
+
+
+arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			π nome_pales
+                  		|
+                  		|
+				|
+				|
+			      [	X ] σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
+			    /   |         \
+     π codpales, nome_pales  π codparti,   \
+			 /    codpales      π codparti
+                        /       |             \
+                       /        |             participante.idade > 80
+                      /         |               \
+		    PALESTRA ASSISTE          PARTICIPANTE
+
+explicação: busca os participantes com idade maior que 80.
+depois faz junção (join) do resultado ASISTE, PALESTRA E PARTICIPANTE, gerando resultado intermediario,
+depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
+
+
+
+
+
+
+
+
+
+
+
+
+
+4) Listar os nomes dos alunos que tenham 40 anos e que estejam assistindo a palestra denominada “Sistemas de Recomendação”.
+select PARTICIPANTE.nome_parti from PARTICIPANTE 
+join ASSISTE on ASSISTE.codparti = PARTICIPANTE.codparti
+join PALESTRA on PALESTRA.codpales = ASSISTE.codpales
+where PARTICIPANTE.idade > 40
+and PALESTRA.nome_pales = 'Sistemas de Recomendação'
+
+algebra:
+π p.nome_parti ( σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 40 ^ p.nome_pales = 'Sistemas de Recomendação'
+			(PALESTRA X ASSISTE, PARTICIPANTE X ASSISTE))
+
+arvore não otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			     π nome_parti
+                  		   |
+                  		   |
+	σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 40 ^ p.nome_pales = 'Sistemas de Recomendação'
+				   |
+				   |
+				   X
+			       /   |   \
+                              /    |     \
+		       PALESTRA ASSISTE PARTICIPANTE
+
+explicação: faz plano cartesiano das tabelas, gerando resultado intermediario,
+depois faz essa operação pra selecionar as linha que realmente precisam: σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 40 ^  p.nome_pales = 'Sistemas de Recomendação'
+depois pega só o nome
+
+
+arvore quase otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			   π nome_parti
+                  		|
+                  		|
+ σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
+				|
+				|
+			        X
+			    /   |   \
+         p.nome_pales =         |    \
+'Sistemas de Recomendação'      |     participante.idade > 40
+                          /     |       \
+		    PALESTRA ASSISTE PARTICIPANTE
+
+explicação: busca os participantes com idade maior que 40 e as palestras com nome 'Sistemas de Recomendação', 
+depois faz plano cartesiano do resultado ASISTE, PALESTRA E PARTICIPANTE, gerando resultado intermediario,
+depois pega só o nome
+
+
+arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			   π nome_parti
+                  		|
+                  		|
+				|
+				|
+			      [ X ] σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
+			    /   |   \
+         p.nome_pales =         |    \
+'Sistemas de Recomendação'      |     participante.idade > 40
+                          /     |       \
+		    PALESTRA ASSISTE PARTICIPANTE
+
+
+explicação: busca os participantes com idade maior que 40 e as palestras com nome 'Sistemas de Recomendação', 
+depois faz junção (join) do resultado com ASISTE, PALESTRA E PARTICIPANTE, gerando resultado intermediario,
+depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
+
+
+
+
+arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
+
+			π nome_parti
+                  		|
+                  		|
+				|
+				|
+			      [	X ] σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
+			    /   |         \
+     π codpales, nome_pales  π codparti,   \
+			 /    codpales      π codparti
+                       /        |            \
+         p.nome_pales =         |             \
+'Sistemas de Recomendaçã        |             participante.idade > 80
+                    /           |               \
+		PALESTRA     ASSISTE          PARTICIPANTE
+
+explicação: busca os participantes com idade maior que 80.
+depois faz junção (join) do resultado com ASISTE, PALESTRA E PARTICIPANTE, gerando resultado intermediario,
+depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
 
 
 
