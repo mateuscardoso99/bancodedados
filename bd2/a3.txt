@@ -375,7 +375,7 @@ arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
 				|
 			      [	X ] σ palestra.codarea = area.codarea
 			       / \
-             π nome_area, codarea  π codarea
+                       π codarea  π codarea, nomarea
                               /    \
 	     σ palestra.vagas > 50  \ 
                             /        \
@@ -406,7 +406,7 @@ join PALESTRA on PALESTRA.codpales = ASSISTE.codpales
 where PARTICIPANTE.idade > 80
 
 algebra: 
-π p.nome_pales ( σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 80 (PALESTRA X (PARTICIPANTE X ASSISTE) )
+π p.nome_pales ( σ palestra.codpales = assiste.codpales ^ σ participante.codparti = assiste.codparti ^ participante.idade > 80 (PALESTRA X (PARTICIPANTE X ASSISTE) )
 
 arvore não otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
 
@@ -605,16 +605,16 @@ arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
 				       |
                                      [ X ] σ palestra.codpales = assiste.codpales
                                      /    \
-                π codpales, nome_pales     π codpales
+                            π codpales     π codpales, nomparti
                                     /       \
-		                   /	  [ X ] σ participante.codparti = assiste.codparti
-                                  /       /   \
-                                 /       /     \
-π nome_pales = 'Sistemas de informação' /       \
-		               /  π codparti   π codparti, codpales
-			      /   idade > 80      \
-                             /      /              \
-		      PALESTRA  PARTICIPANTE    ASSISTE
+		                   /	   [ X ] σ participante.codparti = assiste.codparti
+                                  /       /      \
+                                 /       /         \
+π nome_pales = 'Sistemas de informação' /            \
+		               /  π codparti,nomparti  π codparti, codpales
+			      /   idade > 80            \
+                             /      /                    \
+		      PALESTRA  PARTICIPANTE          ASSISTE
 
 explicação: busca os participantes com idade maior que 80.
 depois faz junção (join) do resultado com ASISTE, PALESTRA E PARTICIPANTE, gerando resultado intermediario,
