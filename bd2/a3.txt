@@ -406,20 +406,25 @@ join PALESTRA on PALESTRA.codpales = ASSISTE.codpales
 where PARTICIPANTE.idade > 80
 
 algebra: 
-π p.nome_pales ( σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 80 (PALESTRA X ASSISTE, PARTICIPANTE X ASSISTE) )
+π p.nome_pales ( σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 80 (PALESTRA X (PARTICIPANTE X ASSISTE) )
 
 arvore não otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
 
 			     π nome_pales
-                  		   |
-                  		   |
-	σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 80
-				   |
-				   |
-				   X
-			       /   |   \
-                              /    |     \
-		       PALESTRA ASSISTE PARTICIPANTE
+                  		 |
+                  		 |
+	σ palestra.codpales = assiste.codpales ^ σ participante.codparti = assiste.codparti ^ participante.idade > 80
+				 |
+				 |
+                                 |
+                                 X
+                                /  \
+                               /    \
+		              /	      X
+		             /     /    \
+			    /     /      \
+                           /     /        \
+		   PALESTRA  PARTICIPANTE  ASSISTE
 
 explicação: faz plano cartesiano das tabelas, gerando resultado intermediario,
 depois faz essa operação pra selecionar as linha que realmente precisam: σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 80
@@ -428,17 +433,22 @@ depois pega só o nome
 
 arvore quase otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
 
-			   π nome_pales
-                  		|
-                  		|
- σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
-				|
-				|
-			        X
-			    /   |   \
-                           /    |     participante.idade > 80
-                          /     |       \
-		    PALESTRA ASSISTE PARTICIPANTE
+			    π nome_pales
+                  		 |
+                  		 |
+  σ palestra.codpales = assiste.codpales ^ σ participante.codparti = assiste.codparti
+				 |
+				 |
+                                 X
+                                /  \
+                               /    \
+		              /	      X
+                             /      /  \
+		            /      /    \
+			   /  idade > 80 \
+                          /      /        \
+		   PALESTRA  PARTICIPANTE  ASSISTE
+
 
 explicação: busca os participantes com idade maior que 80
 depois faz plano cartesiano do resultado com ASISTE, PALESTRA E PARTICIPANTE, gerando resultado intermediario,
@@ -447,16 +457,20 @@ depois pega só o nome
 
 arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
 
-			   π nome_pales
-                  		|
-                  		|
-				|
-				|
-			      [ X ] σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
-			    /   |   \
-                           /    |     participante.idade > 80
-                          /     |       \
-		    PALESTRA ASSISTE PARTICIPANTE
+			     π nome_pales
+                  		  |
+                  		  |
+				  |
+				  |
+                                [ X ] σ palestra.codpales = assiste.codpales ^ σ participante.codparti = assiste.codparti
+                                /   \
+                               /     \
+		              /	      X
+                             /      /  \
+		            /      /    \
+			   /  idade > 80 \
+                          /      /        \
+		   PALESTRA  PARTICIPANTE  ASSISTE
 
 
 explicação: busca os participantes com idade maior que 80.
@@ -468,19 +482,21 @@ depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
 
 arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
 
-			π nome_pales
-                  		|
-                  		|
-				|
-				|
-			      [	X ] σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
-			    /   |         \
-     π codpales, nome_pales  π codparti,   \
-			 /    codpales      π codparti
-                        /       |             \
-                       /        |             participante.idade > 80
-                      /         |               \
-		    PALESTRA ASSISTE          PARTICIPANTE
+			     π nome_pales
+                  		   |
+                  		   |
+				   |
+				   |
+                                 [ X ] σ palestra.codpales = assiste.codpales
+                                 /   \
+                                /     π codpales
+                               /       \
+		              /	       [X] σ participante.codparti = assiste.codparti
+        π codpales, nome_pales        /   \
+		            /  π codparti  π codparti, codpales
+			   /   idade > 80   \
+                          /        /         \
+		   PALESTRA  PARTICIPANTE  ASSISTE
 
 explicação: busca os participantes com idade maior que 80.
 depois faz junção (join) do resultado ASISTE, PALESTRA E PARTICIPANTE, gerando resultado intermediario,
@@ -507,20 +523,24 @@ and PALESTRA.nome_pales = 'Sistemas de Recomendação'
 
 algebra:
 π p.nome_parti ( σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 40 ^ p.nome_pales = 'Sistemas de Recomendação'
-			(PALESTRA X ASSISTE, PARTICIPANTE X ASSISTE))
+			(PALESTRA X (PARTICIPANTE X ASSISTE))
 
 arvore não otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
 
 			     π nome_parti
-                  		   |
-                  		   |
-	σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 40 ^ p.nome_pales = 'Sistemas de Recomendação'
-				   |
-				   |
-				   X
-			       /   |   \
-                              /    |     \
-		       PALESTRA ASSISTE PARTICIPANTE
+                  		 |
+                  		 |
+	σ palestra.codpales = assiste.codpales ^ σ participante.codparti = assiste.codparti ^ participante.idade > 40 ^ p.nome_pales = 'Sistemas de Recomendação'
+				 |
+				 |
+                                 X
+                                /  \
+                               /    \
+		              /	      X
+		             /     /    \
+			    /     /      \
+                           /     /        \
+		   PALESTRA  PARTICIPANTE  ASSISTE
 
 explicação: faz plano cartesiano das tabelas, gerando resultado intermediario,
 depois faz essa operação pra selecionar as linha que realmente precisam: σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti ^ participante.idade > 40 ^  p.nome_pales = 'Sistemas de Recomendação'
@@ -529,18 +549,22 @@ depois pega só o nome
 
 arvore quase otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
 
-			   π nome_parti
-                  		|
-                  		|
- σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
-				|
-				|
-			        X
-			    /   |   \
-         p.nome_pales =         |    \
-'Sistemas de Recomendação'      |     participante.idade > 40
-                          /     |       \
-		    PALESTRA ASSISTE PARTICIPANTE
+			        π nome_parti
+                  		      |
+                  		      |
+       σ palestra.codpales = assiste.codpales ^ σ participante.codparti = assiste.codparti
+				      |
+				      |
+                                      X
+                                    /   \
+                                   /     \
+		                  /	  X
+π nome_pales = 'Sistemas de informação' /  \
+		                /      /    \
+			       /  idade > 80 \
+                              /     /         \
+		      PALESTRA  PARTICIPANTE  ASSISTE
+
 
 explicação: busca os participantes com idade maior que 40 e as palestras com nome 'Sistemas de Recomendação', 
 depois faz plano cartesiano do resultado ASISTE, PALESTRA E PARTICIPANTE, gerando resultado intermediario,
@@ -549,17 +573,20 @@ depois pega só o nome
 
 arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
 
-			   π nome_parti
-                  		|
-                  		|
-				|
-				|
-			      [ X ] σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
-			    /   |   \
-         p.nome_pales =         |    \
-'Sistemas de Recomendação'      |     participante.idade > 40
-                          /     |       \
-		    PALESTRA ASSISTE PARTICIPANTE
+			        π nome_parti
+                  		      |
+                  		      |
+				      |
+				      |
+                                    [ X ] σ palestra.codpales = assiste.codpales ^ σ participante.codparti = assiste.codparti
+                                    /   \
+                                   /     \
+		                  /	  X
+π nome_pales = 'Sistemas de informação' /  \
+		                /      /    \
+			       /  idade > 80 \
+                              /     /         \
+		      PALESTRA  PARTICIPANTE  ASSISTE
 
 
 explicação: busca os participantes com idade maior que 40 e as palestras com nome 'Sistemas de Recomendação', 
@@ -571,24 +598,26 @@ depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
 
 arvore otimizada: (É EXECUTADO DE BAIXO PRA CIMA)
 
-			π nome_parti
-                  		|
-                  		|
-				|
-				|
-			      [	X ] σ palestra.codpales = assiste.codpales, σ participante.codparti = assiste.codparti
-			    /   |         \
-     π codpales, nome_pales  π codparti,   \
-			 /    codpales      π codparti
-                       /        |            \
-         p.nome_pales =         |             \
-'Sistemas de Recomendaçã        |             participante.idade > 80
-                    /           |               \
-		PALESTRA     ASSISTE          PARTICIPANTE
+			         π nome_parti
+                  		       |
+                  		       |
+				       |
+				       |
+                                     [ X ] σ palestra.codpales = assiste.codpales
+                                     /    \
+                π codpales, nome_pales     π codpales
+                                    /       \
+		                   /	  [ X ] σ participante.codparti = assiste.codparti
+                                  /       /   \
+                                 /       /     \
+π nome_pales = 'Sistemas de informação' /       \
+		               /  π codparti   π codparti, codpales
+			      /   idade > 80      \
+                             /      /              \
+		      PALESTRA  PARTICIPANTE    ASSISTE
 
 explicação: busca os participantes com idade maior que 80.
 depois faz junção (join) do resultado com ASISTE, PALESTRA E PARTICIPANTE, gerando resultado intermediario,
 depois pega só o nome, NÃO FAZ PLANO CARTESIANO O QUE OTIMIZA A CONSULTA
-
 
 
