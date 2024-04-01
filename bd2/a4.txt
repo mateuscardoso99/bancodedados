@@ -1,0 +1,130 @@
+Consultas em tabelas podem ser
+– Sequencias
+– Através de índices com a ordem de determinados campos da tabela. Normalmente baseados em Árvores B+
+
+* Índices secundários devem ser criados para colunas que são muito usadas nas clausulas WHERE
+* Índices auxiliam a consulta, mas oneram operações de atualização (Insert, Delete e Update)
+* Chaves primárias criam índices automaticamente
+
+Uma instrução SQL é “transformada” em algoritmos que acessam arquivos
+
+-pesquisa linear: lê todas as linhas do arquivo e seleciona as que satisfazem as condições
+-pesquisa binária: pode ser utilizada se o arquivo está ordenado pelo atributo usado em uma comparação de igualdade
+-utilização de um índice primario (HASH): pode ser usado se a seleção recuperar um único registro
+-utilização de um índice primário para recuperar vários registros: se a condição de seleção envolve <, =<, >, >=, pode-se localizar o indice primario depois os anteriores ou posteriores varrendo sequencialmente o arquivo
+-indice cluster: se uma condição envolve a recuperação de vários registros com uma operação de igualdade, o atributo não é único
+-indice secundario (arvore B) em uma comparação de igualdade pode recuperar registros e ser usado com os operadores <, =<, >, >=
+
+-indice para chave estrangeira: se toda hora for buscado registros pela chave estrangeira é bom ter índice
+
+
+JUNÇÃO SORT-MERGE: antes de fazer join ordena as 2 tabelas pela coluna que une as 2 tabelas
+JUNÇÃO HASH: Pode ser utilizado em junções que usem o operador = (a maioria). Ideia básica: Inicialmente distribuir os registros (tuplas/linhas) em partições usando um arquivos hash
+
+
+CUSTOS:
+- Custo de acesso para armazenamento secundário
+- Custo de armazenamento de arquivos intermediários
+- Custo de operações na memória
+- Custo de comunicação (BDs distribuídos)
+
+Informações relevantes:
+- Tamanhos dos arquivos
+- Número de tuplas/linhas/registros
+- Índices
+- Número de valores distintos
+- Seletividade: percentual de registro que satisfazem uma condição de igualdade
+- Cardinalidade da seleção: número médio de registros recuperados
+
+EXPLAIN:
+– Comando que informa o custo de execução de um comando sql.
+– Resultados informados por siglas de operações a serem realizadas no SGBD
+
+O PostgreSQL armazena as estatísticas na tabela "pg_statistic"
+
+comando ANALYZE atualiza tabela pg_statistic
+comando VACUUM recupera o armazenamento ocupado por tuplas mortas. Na operação normal do PostgreSQL , as tuplas excluídas ou obsoletas por uma atualização não são removidas fisicamente de sua tabela; eles permanecem presentes até que a VACUUM seja feito. Portanto é necessário fazer rodar VACUUM periodicamente, especialmente em tabelas atualizadas com frequência.
+
+
+
+--------------------------------------------
+
+
+
+CUSTO EXEMPLO:
+tabelas:
+PROJETO, linhas: 2000, blocos ocupados no disco: 100
+DEPARTAMENTO, linhas: 50, blocos ocupados no disco: 5
+EMPREGADO, linhas: 10000, blocos ocupados no disco: 2000
+
+consulta a ser feita: 
+SELECT DEPARTAMENTO.NOMDEPTO
+FROM
+PROJETO, DEPARTAMENTO
+WHERE
+PROJETO.CODDEPTO = DEPARTAMENTO.CODDEPTO
+AND
+LOCALIZAÇÃO=“POLITÉCNICO”;
+
+-Inicialmente a operação de seleção será feita sobre a tabela PROJETO
+σ LOCALIZAÇÃO = “POLITECNICO” (PROJETO)
+
+Opções:
+1. Varrer toda tabela PROJETO
+2. Usar o índice sobre o campo localização (índice não é único)
+
+opção 1 = Varrer toda tabela PROJETO, Custo: 100 acessos a disco, pois são ocupados 100 blocos
+
+opção 2:
+custo = Acessos ao índice + acessos aos dados
+acessos ao índice = 1 para o raiz + 1 para a folha (1 nível)
+
+– O otimizador assume uma distribuição uniforme dos dados
+2.000 projetos (NÚMERO_LINHAS), 200 valores distintos para LOCALIZAÇÃO (estmativa)
+
+2000/200 = 10, é estimado que 10 linhas sejam de projetos localizados no "POLITÉCNICO"
+
+é assumido que essas 10 linhas estejam distribuídas uniformemente nos blocos de disco
+– A tabela PROJETO ocupa 100 blocos
+– Assumindo 1 linha com LOCALIZAÇÃO=“POLITÉCNICO” para cada bloco, seriam lidos 10 blocos
+
+
+É criada um tabela temporária para armazenar as linhas selecionadas da tabela projeto
+TEMP1 <= σ LOCALIZAÇÃO = “POLITECNICO” (PROJETO)
+
+Esta tabela pode ser armazenada em um único bloco de um disco
+
+2.000 linhas estão armazenadas em 100 blocos
+– Fator de Bloco da tabela projeto = 10
+- Até 10 linhas podem estar em um bloco
+
+Resumindo:
+– 2 acessos a disco para índice
+– 10 acessos para recuperar as linhas
+– 1 acesso para tabela temporária
+– Totalizando 13 (2+10+1) acessos
+– 13 < 100 acessos (ler tabela PROJETO inteira)
+* Melhor usar índice!!!
+
+
+próxima parte é tratar o JOIN entre PROJETO e DEPARTAMENTO (WHERE PROJETO.CODDEPTO = DEPARTAMENTO.CODDEPTO)
+
+-A tabela DEPARTAMENTO não possui índices
+-Todos os 5 blocos que DEPARTAMENTO usa deverão ser lidos para a memória (5 acessos)
+
+Algoritmo de junção
+– Laços aninhados/Nested Loop!
+
+Criar uma tabela temporária para junção entre PROJETO e DEPARTAMENTO
+-TEMP2 (com estimativa de 10 linhas, por causa da estimativa feita em temp1)
+
+
+
+
+
+***OBS: se fosse em vez de 10 linhas com "PLOITECNICO", 190 linhas, o SGBD não usaria o indice pois não vale a pena e ia varrer tudo, já que a grande maioria de linhas ia ser retornada, por isso consultas que trazem a maioria dos registros de uma tabela são mais custosas
+
+***índice que usa arvore teria 2 acessos porque:
+iria na raiz e depois iria no nó que aponta pro politécnico, e pega todos os nós filhos dele, trazendo todos os registros relativos a "POLITECNICO"
+
+

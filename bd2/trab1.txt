@@ -1,0 +1,19 @@
+1) 200 blocos
+
+
+2)
+indice sobre campo valor_estimado
+custo = 1 acesso pra raiz + 1 pra folha
+
+4000 / 500 = 8, estimado que 8 linhas sejam de valor estimado=10.000,00
+
+é assumido que as 8 linhas estejam distribuidas uniformemente nos blocos do disco
+
+tabela QUADRO ocupa 200 blocos
+
+assumindo 1 linha com valor estimado = 10.000.00 para cada bloco, 
+seriam lidos 8 blocos
+
+4000 linhas armezanadas em 200 blocos
+
+2 + 8 + 1 = 11 acessos
