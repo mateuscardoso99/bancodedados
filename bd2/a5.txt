@@ -1,0 +1,221 @@
+** Transação: uma unidade lógica de trabalho que faz acesso e possivelmente modifica os dados.
+
+– Uma transação pode ser formada por uma ou mais instruções que realizem operações sobre os bancos de dados
+– Falhas podem ocorrer enquanto uma transação está sendo executada
+
+1) Atomicidade: Uma transação é uma unidade indivisível, não pode ser executada parcialmente
+2) Consistente: Uma transação leva o banco de um estado consistente a outro estado também consistente
+3) Isolamento: Outras transações não devem “enxergar” alterações feitas por uma transação até que ela seja completada
+4) Durabilidade: Quando uma transação for confirmada ela deve ser permanente não podendo ser desfeita
+
+Transferindo um valor de X pra Y
+read(X)
+lx := lx – 500
+write(X)
+
+read(Y)
+ly := ly + 500
+write(Y)
+
+E se a transação abortar depois de gravar X ?
+X=500
+Y=1000
+Inconsistente!
+
+------------------------------------------
+
+X = 1000
+
+T1				T2
+Retirada da conta 		Depósito na conta
+
+read(X)
+lx := lx – 500		
+
+				read(X) //lê 1000, pois T1 não escreveu o valor ainda
+				lx := lx + 400 // X = 1400
+				write(X) // grava 1400
+
+
+write(X) 
+//grava 500 pois T1 terminou
+//por último
+//invalidando o 1400 
+//da transação 2
+//pois uma transação não 
+//enxerga as alterações 
+//de outra, e o valor final
+//fica 500
+
+
+Observações:
+− read(X) faz a leitura do valor armazenado
+− lx é uma variável local
+− write(X) grava os dados. A partir desta gravação os dados estão 
+disponíveis para outros usuários/transações (não necessariamente em disco)
+
+
+-----------------------------------------
+
+Begin;
+– Marca o início de uma transação
+
+Commit;
+– Encerra a transação ("confirma")
+
+Rollback;
+– Encerra a transação ("aborta")
+
+
+Begin;
+	Insert into conta values (400, 4000);
+	Select * from conta; //dentro da transação o valor inserido é visto
+Rollback;
+
+Select * from conta; //depois do rollback o valor inserido dentro da transação não existe pois foi feito rollback
+
+
+
+Mais de uma instrução formando uma transação:
+Begin;
+	Update conta set saldo = saldo - 50 where numconta = 100;
+	Update conta set saldo = saldo - 50 where numconta = 200;
+Commit;
+
+Se não for delimitado (begin – commit), uma única instrução é uma transação:
+Delete from tabelão;
+
+
+-----------------------------------------
+
+RECUPERAÇÃO:
+
+Mecanismos de recuperação são baseados em redundância
+– Falha no disco: Backup
+– Falha na transação (interrupção): Arquivo de LOG
+
+Sistema de Recuperação baseado em LOG:
+– Garante duas propriedades: Atomicidade e Durabilidade
+
+LOG -> arquivo onde são registradas as alterações
+produzidas pelas operações que fazem parte de uma
+transação
+
+No LOG existem vários tipos de registro, estes registros
+podem conter, por exemplo o valor existente antes da
+alteração produzido pela transação e o novo valor
+
+< idTransação, idItem, valor_antigo, valor_novo >
+
+Toda alteração feita na base é primeiro registrada no LOG - Write-Ahead Logging (WAL)
+
+
+*SE UMA TRANSAÇÃO FOR MUITO GRANDE PODE ESGOTAR O LIMITE DE ARMAZENAMENTO DO ARQUIVO DE LOG,
+ISSO CAUSARÁ O ROLLBACK DE TODA A TRANSAÇÃO
+
+
+Estrutura do arquivo de LOG:
+<T1, start> //inicia a transação T1
+<T1, saldo.conta100, 1000, 950> //altera o saldo da conta com número 100 para 950
+<T1, saldo.conta200, 2000, 2050> //altera o saldo da conta com número 200 para 2050
+<T1, commit> //encerra a transação e salva os dados
+
+Duas estratégias:
+– Modificação imediata do banco
+– Modificação adiada do banco
+
+
+
+
+
+
+SGBD usa UNDO e REDO quando volta de uma falha:
+
+UNDO (usado em transações não comitadas no arquivo de log): depois que volta da falha (falta de luz por exemplo) desfaz tudo que a transação fez, restaurando os valores que tinham do inicio da transação
+REDO (usado em transações já comitadas no arquivo de log): executa novamente a transação depois que volta da falha (falta de luz por exemplo), pois pode ocorrer de a transação ter feito commit e não estar salvo no disco
+
+
+
+
+
+
+
+MODIFICAÇÃO IMEDIATA: executa uma parte da transação, grava no log primeiro, depois salva na tabela
+ex:
+
+Begin;									<T1,start>
+	Update conta set saldo = saldo – 50,00 where numconta = 100;	<T1, saldo.conta100, 1000, 950>
+	Update conta set saldo = saldo + 50,00 where numconta = 200;    <T1, saldo.conta200,2000,2050>
+commit;									<T1,commit>
+
+- Se ocorrer falha antes do commit, isto é, não existe no LOG "<T1,commit>": (transação não terminou)
+	- O sistema de recuperação do SGBD irá executar UNDO para desfazer o que tiver sido feito (voltam os valores antigos)
+	– Executar UNDO significa varrer o LOG e aplicar o valor antigo registrado aos itens modificados
+
+– Se ocorrer falha após o commit, isto é, existe no LOG "<T1,commit>"
+	- O sistema de recuperação do SGBD irá executar REDO para refazer a transação
+	- Executar REDO significa varrer o LOG e aplicar o valor novo registrado aos itens modificados
+	* REDO é necessário pelo fato de que pode não ter existido tempo para o banco gravar as alterações nas tabelas (lembrando que as modificações são feitas inicialmente no LOG)
+
+
+
+
+
+MODIFICAÇÃO ADIADA: toda a transação é salva no log primeiro, salva no BD depois do commit
+ex:
+Begin;									<T1,start>
+	Update conta set saldo = saldo – 50,00 where numconta = 100;	<T1, saldo.conta100, 1000, 950>
+	Update conta set saldo = saldo + 50,00 where numconta = 200;    <T1, saldo.conta200,2000,2050>
+commit;									<T1,commit>
+
+– Se ocorrer falha antes do commit, isto é, não existe no LOG "<T1,commit>"
+	- O sistema de recuperação do SGBD não irá executar UNDO para desfazer o que tiver sido feito
+	– Nada foi modificado no banco, apenas no LOG (só tem dados no LOG, nada no BD então não precisa de UNDO)
+
+– Se ocorrer falha após o commit, isto é, existe no LOG "<T1,commit>"
+	- O sistema de recuperação do SGBD irá executar REDO para refazer a transação
+	– Executar REDO significa varrer o LOG e aplicar o valor novo registrado aos itens modificados
+	* REDO é necessário pelo fato de que pode não ter existido tempo para o banco gravar as alterações nas tabelas (lembrando que as modificações são feitas inicialmente no LOG)
+
+
+
+
+
+
+Ao acessar um item X do banco de dados a transação cria na sua área privada uma cópia deste item (Xi)
+
+– read(x) atribui o valor do item de dados x presente no banco à variável Xi
+– write(x) atribui o valor da variável Xi ao item de dados X
+
+– Input(B): transfere o bloco para a mémória
+– Output(B): transfere o bloco para o disco
+
+Registros de LOG não serão gravados imediatamente em disco por questões de desempenho
+
+
+
+
+
+CHECKPOINT:
+
+Arquivo de LOG começa a ficar muito grande!!!
+– Tempo gasto para percorrer!!!
+– REDO em Transações já efetivadas!!!
+
+1. Suspender temporariamente a execução das transações
+2. Gravação em disco de todos os registros de LOG que estão na memória
+3. Gravação de todos os blocos de buffer modificados
+4. Gravação de um registro de checkpoint no LOG.
+5. Retomar execução das transações
+
+
+* O registro de checkpoint contém uma lista de todas transações ativas no momento do checkpoint
+
+* No caso de uma falha, após o restart, é verificado qual o último registro de 
+checkpoint no log, sendo verificados todos os registros de transações 
+ativas no checkpoint, e aquelas que iniciaram posteriormente, sendo montadas 
+duas listas:
+
+	- A lista UNDO contém as transações que não possuem um registro de commit, devendo ser desfeitas.
+	- A lista REDO contém as transações que contém registro commit após o checkpoint e que deverão ser refeitas
+
