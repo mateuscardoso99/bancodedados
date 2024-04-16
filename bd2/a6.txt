@@ -1,0 +1,116 @@
+* registros do LOG são gravados na MP inicialmente, depois um conjunto deles é gravado no disco
+
+- Os "buffers" dos registros do LOG devem ser gravados em
+meio estável antes que os “buffers” da base de dados
+passem para o disco. (WAL –Write-Ahead Logging)
+
+– Antes que o "buffer" que contém o registro <commit> do
+LOG de uma transação seja gravado em disco, é necessário
+que todos os registros de LOG referentes a transação sejam
+gravados em disco.
+
+
+-------------------------------------------
+
+
+Controle de Concorrência (Isolamento)
+
+Problemas ocasionados pelo acesso concorrente:
+
+– Perda de atualização
+– Dependência de uma transação não confirmada
+– Análise inconsistente
+
+
+*** uma transação quando começa a executar tem uma área só dela onde são criadas
+variáveis locais, que só existem dentro da transação
+
+*** Se executasse uma transação por vez não aconteceria esses erros abaixo, mas isso teria
+problemas de desempenho, execução concorrente é o certo a se fazer
+mas precisa cuidar o acesso concorrente
+
+
+Perda de atualização (Lost update):
+
+X = 1000
+
+T1				T2
+
+read(X)
+X = X - 500
+				read(X) leu 1000
+				X = X + 400
+
+write(X)
+				write(X)
+
+quando T1 acabou gravou 500, mas T2 acabou depois de T1 e gravou 1400,
+o saldo final ficou 1400 quando deveria ser 900
+
+
+----------------------------------------------
+
+
+Dependência de uma transação não confirmada (Leitura suja):
+
+X = 1000
+
+T1				T2
+
+read(X)
+X = X - 500
+write(X)
+				read(X) leu 500
+
+ROLLBACK
+
+*T2 leu um valor alterado pela transação T1, mas T1 fez rollback e X voltou a ser 1000
+e T2 continuou a sua execução com base no valor "sujo" errado que é 500
+
+
+----------------------------------------------
+
+
+Análise inconsistente:
+
+X = 1000
+Y = 1000
+Z = 2000
+W = 500
+
+soma = 4500
+
+T1 (efetua transferencia)		T2 (soma o saldo das contas)
+
+					read(Y) leu 1000
+
+read(X)
+X = X - 500
+write(X)
+
+					read(Z) leu 2000
+					read(W) leu 500
+					read(X) leu 500
+
+read(Y)
+Y = Y + 500
+write(Y)
+
+
+T2 mostra soma = 4000, quando devia mostrar 4500 pois Y é somado com 500 depois da T2 ler todos os valores
+pois é uma transferência sai 500 de X e entra 500 em Y, a soma permanece 4500, não podia mostrar 4000
+
+
+-----------------------------------------------
+
+
+
+Serializabilidade: É o critério de correção para execução de um determinado conjunto de transações
+
+
+*serializable é um nível de isolamento que as transações devem ser executadas em série e não de modo concorrente
+Nenhuma linha pode ser alterada, nem excluída, nem novas linhas podem ser inseridas por uma transação simultânea.
+
+
+
+
