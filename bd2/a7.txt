@@ -1,0 +1,276 @@
+ESCALONAMENTO:
+
+A sequência (ordem cronológica) de execução das ações executadas pelas transações é denominada schedule/escalonamento
+
+Duas operações em um escalonamento estão em conflito se eles pertencem a diferentes transações, 
+atuam sobre o mesmo item de dado e se pelo menos uma delas é um write(X)
+
+
+Diz-se que um escalonamento de execução
+das transações é considerado correto se for
+serializável.
+
+
+– Se um escalonamento S puder ser transformado
+em um escalonamento S’ por uma série de trocas
+de instruções não-conflitantes , diz-se que S e S’
+são equivalentes no conflito
+
+
+pra serializar transações concorrentes SGBD cria um grafo de precedência de um escalonamento
+GRAFO = (V,E)
+
+- V é um conjunto de vértices - um para cada transação do escalonamento
+– E é um conjunto de arestas
+
+As arestas são montadas a partir da observação das
+transações que participam do escalonamento
+- Sendo duas transações Ti e Tj haverá uma aresta de Ti apontando pra Tj
+se forem observadas as seguintes condições:
+1. Ti executa write(Q) antes de Tj executar read(Q)
+2. Ti executa read(Q) antes de Tj executar write(Q)
+3. Ti executa write(Q) antes de Tj executar write(Q)
+
+
+----------------------------
+
+Implementação do Isolamento
+
+A implementação de esquemas de controle de
+concorrência deve considerar a manutenção da
+serializabilidade e dos escalonamentos sem cascata
+
+Principais Técnicas:
+– Bloqueios (Locks)
+– Multiversão
+– Timestamp
+
+Atualmente bloqueios e multiversão são usados em conjunto
+
+Bloqueio
+– Basicamente uma variável associada a um item (linha) de dados que
+descreve a condição do item em relação às possíveis operações
+que podem ser aplicadas a ele
+- Uma transação deverá obter um bloqueio (lock)
+sobre um item do banco de dados (X) antes de
+realizar a operação sobre o item
+- Se uma transação T1 já tiver obtido o bloqueio a
+transação T2 terá que esperar a liberação
+
+- Compartilhado (Shared). Várias transações podem obter este bloqueio, este bloqueio permite a leitura mas não a atualização do item bloqueado – lock-S(X)
+– Exclusivo (Exclusive). Apenas uma transação pode obter este bloqueio, este bloqueio permite leitura e gravação – lock-X(X)
+
+Usando estes bloqueios é definido o seguinte protocolo:
+– Para acessar um item (linha) de dado a transação deve obter um bloqueio (compartilhado ou exclusivo) compatível a operação a ser realizada
+– Um bloqueio é obtido apenas se o item de dado já não estiver bloqueado de forma incompatível
+– Se uma solicitação de bloqueio for feita e não puder ser atendida a transação entre em estado de espera
+
+Conversão de Bloqueio
+– Uma transação que já possui bloqueio sobre um item pode converter um bloqueio (promoção de bloqueio compartilhado para exclusivo)
+
+
+
+----------------------------------------------------------------
+
+LOCK-X = bloqueio exclusivo
+LOCK-S = bloqueio compartilhado
+
+
+Resolvendo o problema Perda de Atualização:
+
+X = 1000
+
+T1				T2
+
+read(X)
+X = X - 500
+				read(X) leu 1000
+				X = X + 400
+
+write(X)
+				write(X)
+
+quando T1 acabou gravou 500, mas T2 acabou depois de T1 e gravou 1400,
+o saldo final ficou 1400 quando deveria ser 900
+
+
+SOLUÇÃO:
+
+X = 1000
+
+T1				T2
+
+LOCK-X (X)
+read(X)
+X = X - 500
+write(X)
+UNLOCK (X)
+				LOCK-X (X)
+				read(X) leu 1000
+				X = X + 400
+				write(X)
+				UNLOCK-X (X)
+
+SALDO = 900
+
+
+
+
+-------------------------------------------------------------------
+
+
+
+
+Resolvendo o problema Dependência de uma transação Não Confirmada
+
+
+X = 1000
+
+T1				T2
+
+read(X)
+X = X - 500
+write(X)
+				read(X) leu 500
+
+ROLLBACK
+
+*T2 leu um valor alterado pela transação T1, mas T1 fez rollback e X voltou a ser 1000
+e T2 continuou a sua execução com base no valor "sujo" errado que é 500
+
+
+SOLUÇÃO:
+
+X = 1000
+
+T1				T2
+
+LOCK-X (X)
+read(X)
+X = X - 500
+write(X)
+UNLOCK (X)
+ROLLBACK
+				LOCK-X (X)
+				read(X) leu 500
+
+
+
+-------------------------------------------------------------------
+
+
+
+Análise inconsistente:
+
+X = 1000
+Y = 1000
+Z = 2000
+W = 500
+
+soma = 4500
+
+T1 (efetua transferencia)		T2 (soma o saldo das contas)
+
+					read(Y) leu 1000
+
+read(X)
+X = X - 500
+write(X)
+
+					read(Z) leu 2000
+					read(W) leu 500
+					read(X) leu 500
+
+read(Y)
+Y = Y + 500
+write(Y)
+
+
+T2 mostra soma = 4000, quando devia mostrar 4500 pois Y é somado com 500 depois da T2 ler todos os valores
+pois é uma transferência sai 500 de X e entra 500 em Y, a soma permanece 4500, não podia mostrar 4000
+
+
+SOLUÇÃO:
+
+T1 (efetua transferencia)		T2 (soma o saldo das contas)
+
+					LOCK-S (Y)
+					read(Y) leu 1000
+LOCK-X (X)
+read(X)
+X = X - 500
+write(X)
+
+					LOCK-S (Z)
+					read(Z) leu 2000
+					LOCK-S (W)
+					read(W) leu 500
+					//aguardando t1
+					read(X) leu 500
+
+//aguardando t2
+read(Y)
+Y = Y + 500
+write(Y)
+
+
+
+-------------------------------------------------------------------
+
+
+
+Multiversionamento:
+Evita que algumas operações sejam retardadas (lock) ou desfeitas (timestamp)
+
+- Cada operação write cria uma nova versão de um item X
+– Uma operação read irá selecionar uma versão que garanta a serialização 
+(irá ler a versão produzida por uma transação já efetivada, por exemplo)
+
+
+
+
+Multiversão com bloqueio em duas fases
+
+Transações de atualização são tratadas de modo diferenciado
+– Nenhuma transação poderá atualizar o mesmo item, pois é feito um bloqueio exclusivo
+- Transações de atualização sofrem bloqueio em duas fases
+
+- O valor lido é sempre o valor de uma versão produzido por uma transação 
+anterior a atual
+- A versão produzida pela transação está disponível para a própria transação
+ 
+- Um número sequencial é associado a cada transação (ts_counter)
+– Toda transação está associada a um timestamp (ts_counter)
+– Quando uma transação atualiza um item ela cria uma nova versão com 
+ts_counter = ∞ (esse símbolo impede que qualquer transação faça a leitura desta nova versão)
+
+
+
+NIVEIS DE ISOLAMENTO:
+
+leitura suja: uma transação T1 atualiza um item que é lido por uma transação T2. após a transação T1 é desfeita
+leitura não repetível: uma transação T1 faz a leitura de um item que a seguir é atualizado por T2. após isso T1 torna a ler o item lido anteriormente obtendo um resultado diferente
+leitura fantasma: transação T1 faz a leitura de todas as linhas de uma tabela, após T2 insere uma nova linha. após isso T1 volta a ler as linhas da tabela e encontra uma linha a mais
+
+-read uncommitted: todos os problemas ocorrem
+-read commited: as alterações de outras transações serão visíveis na atual quando elas forem comitadas não ocorre leitura suja, mas ocorre leitura não repetivel, e ocorre leitura fantasma
+-repeatable read: não ocorre leitura suja nem leitura não repetivel, mas ocorre leitura fantasma
+-serializable: execução serial, as alterações de outras transações não serão vistas nessa transação, somente será visível depois de esta seja comitada, não acontece leitura suja nem leitura repetível e nem leitura fantasma
+
+
+T1 									T2
+1  begin;
+2  set transaction isolation level read committed;
+3  update tabela1 set campo1 = 800 where codtab1 = 2;
+4 									begin;
+5 									set transaction isolation level read committed;
+6 									select campo1 from tabela1 where codtab1 = 2; //não vai ler 800, pois read commited não lê enquanto não for comitada a outra transação
+7  select campo1 from tabela1 where codtab1 = 2;
+8  Insert into tabela1 values (4,2000);
+9  Select count(*) from tabela1; //count = 2
+10 									Select count(*) from tabela1; //count = 1
+11 commit;
+12 									Select count(*) from tabela1; //count = 2, pois T1 foi feito commit então agora serão vistas as alterações
+13 									select campo1 from tabela1 where codtab1 = 2; //será lido 800
+14 									commit;
+
