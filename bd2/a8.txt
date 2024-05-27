@@ -1,0 +1,204 @@
+DEADLOCK:
+
+T1 (efetua transferencia)									T2 (soma o saldo das contas)
+
+												LOCK-S (Y) --bloqueio compartilhado em Y, outras transações podem ler Y mas não escrever até que esse bloqueio seja liberado
+												read(Y) leu 1000
+LOCK-X (X) --bloqueio em X, ninguém pode ler ou escrever até que esse bloqueio seja liberado
+read(X)
+X = X - 500
+write(X)
+
+												LOCK-S (Z) --bloqueio compartilhado em Z, outras transações podem ler Z mas não escrever até que esse bloqueio seja liberado
+												read(Z) leu 2000
+												LOCK-S (W) --bloqueio compartilhado em W, outras transações podem ler W mas não escrever até que esse bloqueio seja liberado
+												read(W) leu 500
+												//aguardando t1
+												read(X) leu 500 --vai tentar ler X mas X tem um bloqueio exclusivo, vai ficar esperando T1
+
+//aguardando t2
+read(Y)
+Y = Y + 500 
+--vai tentar atualizar Y mas Y tem um bloqueio compartilhado que 
+--não permite que ninguem atualize, vai ficar esperando T2, 
+--UMA transação vai ficar esperando a outra infinitamente
+
+write(Y)
+
+
+
+
+------------------------------------------
+
+
+
+1) Observe o escalonamento abaixo que mostra a ordem de 
+execução das instruções SQL. 
+Leve em conta que é utilizado o protocolo de multiversão com bloqueio 
+em 2 fases (o que é utilizado no PostgreSQL). 
+Considere que a tabela1, que é referenciada nas instruções, possui antes 
+da execução das transações T1 e T2 o conteúdo mostrado abaixo
+
+1.1) Considerando que o nível de isolamento é read commited, 
+Escreva na coluna Valor mostrado (nesta folha) os valores que 
+são mostrados pela instrução select (linhas 6,7, 9, 10, 12 e 13)
+
+
+Tabela1
+codtab1(PK) 	campo1
+1 		200
+2 		300
+3 		800
+4		900
+
+
+
+T1 								T2	 							Valor Mostrado
+
+1 begin;
+------------------------------------------------------------------------------------------------------------------------------------------------
+2 set transaction isolation level read committed;
+------------------------------------------------------------------------------------------------------------------------------------------------
+3 update tabela1 set campo1 = 500 where codtab1 = 2;
+------------------------------------------------------------------------------------------------------------------------------------------------
+4								Begin;
+------------------------------------------------------------------------------------------------------------------------------------------------
+5 								set transaction isolation level read committed;
+------------------------------------------------------------------------------------------------------------------------------------------------
+6 								select campo1 from tabela1 where codtab1 = 2;			300
+------------------------------------------------------------------------------------------------------------------------------------------------
+7 select campo1 from tabela1 where codtab1 = 2;											500
+------------------------------------------------------------------------------------------------------------------------------------------------
+8 insert into tabela1 (codtab1,campo1) values (5,500);
+------------------------------------------------------------------------------------------------------------------------------------------------
+9 select count(*) from tabela1;													5
+------------------------------------------------------------------------------------------------------------------------------------------------
+10 								select count(*) from tabela1;					4
+------------------------------------------------------------------------------------------------------------------------------------------------
+11 commit;
+------------------------------------------------------------------------------------------------------------------------------------------------
+12 								select count(*) from tabela1;					5
+------------------------------------------------------------------------------------------------------------------------------------------------
+13 								select campo1 from tabela1 where codtab1 = 2;			500
+------------------------------------------------------------------------------------------------------------------------------------------------
+14								commit;
+
+
+
+
+
+
+
+-----------------------------------------------
+
+
+
+
+
+
+
+TAREFA – BANCO DE DADOS II
+1.2) Agora considere que o nível de isolamento é serializable, e que a 
+tabela1 voltou a ter o seu conteúdo original, que é mostrado abaixo. 
+Escreva na coluna Valor mostrado(nesta folha) os valores que são mostrados 
+pela instrução select (linhas 6,7,9,10, 12 e 13)
+
+Tabela1
+codtab1(PK) 	campo1
+1 		200
+2 		300
+3 		800
+4 		900
+
+
+T1								 T2								 Valor Mostrado
+1 begin;
+------------------------------------------------------------------------------------------------------------------------------------------------
+2 set transaction isolation level serializable;
+------------------------------------------------------------------------------------------------------------------------------------------------
+3 update tabela1 set campo1 = 500 where codtab1 = 2;
+------------------------------------------------------------------------------------------------------------------------------------------------
+4 								Begin;
+------------------------------------------------------------------------------------------------------------------------------------------------
+5 								set transaction isolation level serializable;
+------------------------------------------------------------------------------------------------------------------------------------------------
+6 								select campo1 from tabela1 where codtab1 = 2;			200
+------------------------------------------------------------------------------------------------------------------------------------------------
+7 select campo1 from tabela1 where codtab1 = 2;											500
+------------------------------------------------------------------------------------------------------------------------------------------------
+8 insert into tabela1 (codtab1,campo1) values (5,500);
+------------------------------------------------------------------------------------------------------------------------------------------------
+9 select count(*) from tabela1;													5
+------------------------------------------------------------------------------------------------------------------------------------------------
+10 								select count(*) from tabela1;					4
+------------------------------------------------------------------------------------------------------------------------------------------------
+11 commit;
+------------------------------------------------------------------------------------------------------------------------------------------------
+12 								select count(*) from tabela1;					4
+------------------------------------------------------------------------------------------------------------------------------------------------
+13 								select campo1 from tabela1 where codtab1 = 2;			200
+------------------------------------------------------------------------------------------------------------------------------------------------
+14 								commit;
+
+
+
+
+
+1.3) Nos dois casos (read committed e serializable), o que aconteceria se a instrução
+commit da linha 11 fosse trocada pela instrução rollback ? Que valores seriam
+mostrados pela instrução select nas linhas 12 e 13 ?
+
+mostraria os mesmos valores
+
+
+serializable lê o mesmo valor sempre. até o fim.
+
+
+
+
+------------------------------------------------------
+
+
+
+
+
+
+
+Assuma que o SGBD permite que ocorra o fenômeno chamado Leitura Suja
+(DirtyRead) também chamado Dependência de uma transação não confirmada
+(Uncommitted Data Problem), o que é permitido quando o nível de isolamento 
+é readuncommited. Considere que a tabela1 tem o conteúdo mostrado abaixo.
+Escreva na coluna Valor mostrado(nesta folha) os valores que são mostrados 
+pela instrução select (linhas 6,7 e 9)
+
+
+Tabela1
+codtab1(PK) 	campo1
+1 		100
+2 		200
+3 		300
+4 		400
+
+
+
+T1 								T2 								Valor Mostrado
+1 begin;
+------------------------------------------------------------------------------------------------------------------------------------------------
+2 set transaction isolation level readuncommited;
+------------------------------------------------------------------------------------------------------------------------------------------------
+3 update tabela1 set campo1 = 250 where codtab1 = 2;
+------------------------------------------------------------------------------------------------------------------------------------------------
+4 								Begin;
+------------------------------------------------------------------------------------------------------------------------------------------------
+5 								set transaction isolation level read uncommited;
+------------------------------------------------------------------------------------------------------------------------------------------------
+6 								select campo1 from tabela1 where codtab1 = 2;			250
+------------------------------------------------------------------------------------------------------------------------------------------------
+7 select campo1 from tabela1 where codtab1 = 2;											250
+------------------------------------------------------------------------------------------------------------------------------------------------
+8 commit;
+------------------------------------------------------------------------------------------------------------------------------------------------
+9 								select campo1 from tabela1 where codtab1 = 2;			250
+------------------------------------------------------------------------------------------------------------------------------------------------
+10								commit;
+
