@@ -190,30 +190,6 @@ T2 mostra soma = 4000, quando devia mostrar 4500 pois Y é somado com 500 depois
 pois é uma transferência sai 500 de X e entra 500 em Y, a soma permanece 4500, não podia mostrar 4000
 
 
-SOLUÇÃO:
-
-T1 (efetua transferencia)		T2 (soma o saldo das contas)
-
-					LOCK-S (Y)
-					read(Y) leu 1000
-LOCK-X (X)
-read(X)
-X = X - 500
-write(X)
-
-					LOCK-S (Z)
-					read(Z) leu 2000
-					LOCK-S (W)
-					read(W) leu 500
-					//aguardando t1
-					read(X) leu 500
-
-//aguardando t2
-read(Y)
-Y = Y + 500
-write(Y)
-
-
 
 -------------------------------------------------------------------
 
