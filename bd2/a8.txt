@@ -1,3 +1,10 @@
+SGBD mantém um grafo com todas as transações que estão ocorrendo no momento
+as transações que dependem uma da outra são ligadas entre si para marcar que existe uma dependência
+
+
+---------------------------------------------------------------------
+
+
 DEADLOCK:
 
 T1 (efetua transferencia)									T2 (soma o saldo das contas)
