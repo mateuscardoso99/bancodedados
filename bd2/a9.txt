@@ -1,0 +1,162 @@
+Administração de Bancos de Dados
+
+– Uma área de disco é reservada/inicializada para armazenamento dos bancos de dados
+- Um cluster/agrupamento é uma coleção de banco de dados gerenciada por uma única instância de um servidor de banco de dados
+– É feito com um utilitário: initibd
+* Permissões de acesso aos arquivos são revogadas dos usuários do Sistema Operacional!! ou seja quem toma o controle é o usuário postgres, e não mais os usuários do SO
+
+
+-----------------------------
+
+
+SCHEMA:
+- divisão / agrupamento lógico das tabelas
+- serve para organizar o BD
+
+
+Esquemas/Schemas
+– Inicialmente existe um único esquema: public
+
+
+Criando um esquema
+– create schema nome_esquema;
+– drop schema nome_esquema;
+
+
+
+----------------------------
+
+
+
+CREATE [ [ GLOBAL | LOCAL ] { TEMPORARY | TEMP } | UNLOGGED ] TABLE [ IF NOT EXISTS ] table_name ( [
+  { column_name data_type [ STORAGE { PLAIN | EXTERNAL | EXTENDED | MAIN | DEFAULT } ] [ COMPRESSION compression_method ] [ COLLATE collation ] [ column_constraint [ ... ] ]
+    | table_constraint
+    | LIKE source_table [ like_option ... ] }
+    [, ... ]
+] )
+[ INHERITS ( parent_table [, ... ] ) ]
+[ PARTITION BY { RANGE | LIST | HASH } ( { column_name | ( expression ) } [ COLLATE collation ] [ opclass ] [, ... ] ) ]
+[ USING method ]
+[ WITH ( storage_parameter [= value] [, ... ] ) | WITHOUT OIDS ]
+[ ON COMMIT { PRESERVE ROWS | DELETE ROWS | DROP } ]
+[ TABLESPACE tablespace_name ]
+
+
+Global | Local
+– irrelevante para o PostgreSQL
+
+Temporary | Temp
+– A tabela existe apenas durante a sessão
+– Útil para relatórios
+– on commit PRESERVE ROWS | DELETE ROWS | DRO
+
+Unlogged
+– Não observa o WAL – Write-Ahead Loggin (não vai pro arquivo de log)
+
+
+like
+– Create table tab_cop (like tab including all);
+– Inserindo: insert into tab_cop select * from tab;
+
+
+inherits
+– create table tab (col1 int) inherits (tab_ancestral);
+
+tablespace: particionar os dados da tabela em diferentes dispositivos/discos
+Tablespace uma divisão física (permite distribuir os dados entre dispositivos/discos diferentes)
+
+
+-------------
+
+
+NULL: Não é zero nem branco, NULL = nada
+
+CHECK:
+– [coluna] [tipo] check (expressão)
+– [coluna] [tipo] constraint [nome_constraint check] (col2 > 10)
+
+DEFAULT:
+- valor padrão pra coluna
+
+UNIQUE:
+- valor único pra coluna
+
+
+
+
+ALTER TABLE - Exemplos
+– ALTER TABLE Tabela DROP coluna;
+– ALTER TABLE Tabela ADD COLUMN coluna tipo;
+– ALTER TABLE Tabela DROP constraint [nome_constraint];
+– ALTER TABLE Table ADD constraint [nome_constraint] [tipo_constraint]...;
+– ALTER TABLE Tabela ALTER COLUMN coluna TYPE numeric(10,2);
+– ALTER TABLE Tabela RENAME COLUMN coluna TO coluna_nova;
+– ALTER TABLE produtos RENAME TO equipamentos;
+- ALTER TABLE Tabela ENABLE TRIGGER [trigger_name | ALL | USER]
+- ALTER TABLE Tabela DISABLE RULE rewrite [rule_name]
+
+
+
+DROP TABLE aluno CASCADE: apaga todos as contraints de aluno nas outras tabelas e depois apaga a tabela aluno
+
+
+--------------------------
+
+
+CMD:
+psql -U postgres –d postgres
+-U = user
+-d = db_name
+
+\l = list DBs
+\c [db_name] = conecta em um BD
+\dt = lista tabelas
+\? = ajuda
+\d tabela = mostra informações da tabela
+\q = sair
+
+
+
+----------------------
+
+
+
+PASTAS:
+data /var/lib/postgresql/9.5/main
+config /etc/postgresql/9.5/main
+socket /var/run/postgresql
+
+LOGS:
+/var/log/postgresql
+
+
+----------------------
+
+
+Conexões – Habilitando acesso remoto:
+
+postgresql.conf:
+	- listen_addresses = '*' 
+
+
+--------------------
+
+
+SEGURANÇA:
+Conceder permissões: Grant 
+
+	GRANT { { SELECT | INSERT | UPDATE | DELETE | RULE | REFERENCES |
+	TRIGGER } [,...] | ALL [ PRIVILEGES ] } ON [ TABLE ] objectname [, ...] TO {
+	username | GROUP groupname | PUBLIC } [, ...]
+	GRANT SELECT ON aluno TO usuario1;
+	GRANT UPDATE (nomprod,codgrupo) ON produto TO usuario2 
+
+Retirar permissões: Revoke
+
+	REVOKE { { SELECT | INSERT | UPDATE | DELETE |
+	RULE | REFERENCES | TRIGGER } [,...] | ALL [ PRIVILEGES ]
+	} ON [ TABLE ] object [, ...] FROM { username | GROUP
+	groupname | PUBLIC } [,	
+
+	Revoke update (nomaluno) on aluno from usuario1
+	//retira permissão do usuario1 pra atualizar o nome do aluno na tabela aluno
