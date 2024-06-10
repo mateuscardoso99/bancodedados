@@ -1,0 +1,62 @@
+A cláusula WITH em SQL foi introduzida no SQL padrão para simplificar consultas longas e complexas, especialmente aquelas com JOINs e subconsultas. 
+Frequentemente chamada de refatoração CTE ou subconsultas, uma cláusula WITH define um conjunto de dados temporários que podem ser referenciados em consultas subsequentes.
+
+A cláusula WITH é considerada "temporária" porque o resultado não é armazenado permanentemente em nenhum lugar no esquema do banco de dados. 
+Ela atua como uma visão temporária que só existe durante a execução da consulta, ou seja, só está disponível durante o escopo de execução das declarações SELECT, INSERT, UPDATE, DELETE e MERGE. 
+Ela só é válida na consulta à qual pertence, possibilitando uma melhoria na estrutura de uma declaração sem poluir o namespace global.
+
+Simplificando, a principal vantagem da cláusula WITH é que ela ajuda a organizar e simplificar as longas e complexas consultas hierárquicas, dividindo-as em pedaços menores e mais legíveis.
+
+EX:
+WITH cte_Quantidade
+AS
+(SELECT
+    SUM(Quantidade) as Total
+FROM InformacoesPedido
+GROUP BY ID_Produto)
+ 
+SELECT
+    AVG(Total) quantidade_media_produto
+FROM cte_Quantidade;
+
+
+--------------------------
+
+SEM USAR WHIT:
+
+SELECT
+    AVG(Total) quantidade_media_produto
+FROM
+(SELECT
+SUM(Quantidade) as Total
+FROM InformacoesPedido
+GROUP BY ID_Produto)
+
+---------------------------------
+
+
+a cláusula WITH é uma substituta para as subconsultas normais. O ponto principal é que, diferente das subconsultas, ao usar a cláusula WITH para gerar uma CTE você pode reutilizar o mesmo resultado várias vezes em seu código.
+
+WITH AS ANINHADO:
+
+WITH cte_vendas
+AS
+(SELECT
+    ID_Funcionario,
+    COUNT(ID_Pedido) as Pedidos,
+    ID_Fornecedor
+FROM Pedidos
+GROUP BY ID_Funcionario, ID_Fornecedor),
+ 
+--Segunda WITH AS
+fornecedor_cte
+AS
+(SELECT *
+FROM cte_vendas
+WHERE ID_Fornecedor=2 or ID_Fornecedor=3)
+ 
+SELECT
+    ID_Fornecedor, AVG(Pedidos) pedido_medio_por_funcionario
+FROM
+fornecedor_cte
+GROUP BY ID_Fornecedor;
