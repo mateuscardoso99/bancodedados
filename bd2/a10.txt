@@ -1,0 +1,469 @@
+Backup/Recuperação
+
+- Tipos de Backup
+	Completo – Full: Todo conteúdo é copiado
+	Incremental: Apenas aquele conteúdo modificado desde o último backup
+
+comandos postgres:
+– pg_dumpall (inclui todas as bases...)
+– pg_dump (bases específicas...)
+– pg_restore
+
+Fazendo backup:
+pg_dump -U postgres -f arquivo nome_base
+pg_dump -U postgres -Fp arquivo.sql nome_base //-F = formato -p =  plain-text SQL script file
+
+Restaurando:
+createdb -U postgres base_nova
+psql -U postgres -f arquivo base_nova
+
+* Após restaurar usar Analyze
+
+Fazendo backup (formato <> texto...)
+pg_dump -U postgres -Fc -f arquivo.txt nome_base
+
+Restaurando
+createdb -U postgres base_nova
+pg_restore –U postgres –d base_nova arquivo.txt
+
+
+Apenas 1 tabela (pode perder regras de integridade!!!)
+pg_restore –U postgres –d base_nova –t tabela arquivo.txt
+
+
+Opções no Sistema Operacional:
+tar -cf backup.tar /opt/PostgreSQL/9.3/data
+
+
+
+dá pra fazer backup só dos dados ou só da estrutura das tabelas se quiser
+
+hot backup: se dados forem modificados durante o backup, essas modificações entram no backup também
+
+
+------------------------------------------------
+
+
+
+
+Sintonia/Tuning:
+Tuning e Otimização são Fortemente relacionados!
+- Tuning: envolve mudanças na base de dados (criar índices, particionar tabelas, etc.)
+- Otimização: consultas
+
+Tuning => Performance, Monitoramento do banco de dados
+
+
+Fatores que influenciam a performance
+Carga de trabalho:
+- Transações online + batch jobs + consultas ad hoc, etc.
+
+Throughput/Recursos
+- Capacidade do hardware e software processar dados
+  Velocidade de I/O
+  Velocidade de CPU
+  Processamento paralelo
+
+Fatores que influenciam a performance
+- Otimização da consultas
+- Contenção: disputa por recursos
+
+Tuning/Sintonia – Quando fazer?
+O projeto físico inicial não atende a demanda
+– Sintonização de índices
+– Sintonização do projeto do banco de dados
+– Sintonização de consultas
+
+Sintonização de índices
+- Reindex
+
+Sintonização do Projeto de BD
+- Desnormalização
+- Particionamento (mesmo quando o BD não é distribuído)
+- Redundância (controlada)
+
+Sintonização de consultas:
+Alguns otimizadores não usam índices quando são usadas expressões aritméticas
+– Exemplo: salario/30 > 11,50
+Evitar pesquisar que procurem por NULOS
+– Exemplo: salario is NULL
+Cuidar o uso do operador IN
+– Melhor usar EXISTS
+Cuidar LIKE
+– Where nome like “Fulano%”
+– Where nome like “%Fulano”
+Distinct deixa mais lento o processamento
+
+
+
+
+
+----------------------------------------
+
+
+
+
+Bancos de Dados Distribuídos:
+- uma coleção de múltiplas bases de dados logicamente interrelacionadas e 
+distribuídas em um rede de computadores
+
+- SGBDD: o software que permite e o gerenciamento das BDD e torna a 
+distribuição transparente para os usuários
+
+– Um SGBDD não é um sistema onde a base de dados reside em apenas um nó 
+podendo ser acessada de outros nós
+
+– Um BDD não é apenas uma coleção de arquivos distribuídos sobre uma rede
+
+– Distribuição (física) não implica em que os computadores que armazenam os 
+BD estejam geograficamente distantes 
+
+– Em um banco distribuído a visão que o usuário ou
+programa de aplicação deverá ter é a mesma de
+quando se está usando um banco centralizado
+
+
+Vantagens bancos distribuídos:
+– Compartilhamento dos dados
+– Autonomia
+– Disponibilidade
+– Possibilidade de melhorar a performance
+
+Desvantagens (aumento da complexidade):
+– Projeto de BDD
+– Processamento de Queries
+– Mecanismos de Controle de Concorrência
+– Mecanismos de recuperação
+– Segurança
+
+
+
+
+Projeto de Banco de Dados distribuídos
+
+Possibilidades:
+– Replicação : O sistema mantém diversas réplicas idênticas (cópias) de uma 
+mesma tabela. Cada réplica é armazenada em um nó diferente
+– Fragmentação: A tabela é dividida em fragmentos sendo cada fragmento armazenado 
+em um nó.
+– Replicação e Fragmentação: fragmentos duplicados
+
+Decisões a serem tomadas:
+1. Partição dos dados (fragmentação)
+2. Alocação dos dados (local onde ficarão os dados)
+
+
+Fragmentação dos dados:
+– Horizontal: Distribuir as linhas da tabela em
+diferentes nós.
+– Vertical: Cada fragmento mantém apenas alguns
+atributos da relação original, a ligação é feita por
+algum atributo
+– Mista: Horizontal e Vertical
+
+
+
+
+
+A empresa “ACME” possui diversas filiais que vendem
+exatamente os mesmos produtos. Cada uma das filiais controla
+seu próprio estoque, realizando vendas apenas com produtos
+do seu estoque. O valor dos produtos é o mesmo em cada uma
+das filiais.
+
+Produto (codprod,nomprod,unidade,valor)
+Estoque (codprod,codfilial,quantidade_estoque)
+Funcionario(codfunc,nomfunc,salário,num_dependentes,codfilial)
+
+
+Fragmentação vertical da tabela funcionário:
+Func1(codfunc,nomfunc,codfilial)
+Func2(codfunc,salário,num_dependentes)
+
+** Uma operação de join permite reunir os fragmentos
+
+
+
+Fragmentação horizontal da tabela funcionário
+Uma operação de união (UNION) reúne os fragmentos
+
+
+---------
+
+
+Projeto de Banco de Dados distribuídos
+
+Possibilidades de alocação:
+– Particionamento total (sem uso de replicação)
+– Replicação total (réplicas para tudo)
+– Replicação parcial (algumas tabelas replicadas)
+
+Replicação:
+– Aumenta a disponibilidade dos dados
+– Causa problemas na atualização das réplicas
+
+
+Objetivos de um SGBDD:
+Independência de Fragmentação. Os usuários irão ter uma
+visão dos dados que é uma visão na qual os fragmentos estão
+combinados logicamente por meio de junções e uniões
+adequadas. É responsabilidade do SGBDD (mais
+particularmente do componente responsável pela
+execução/otimização das consultas) determinar a quais
+fragmentos é necessário ter acesso físico para satisfazer a
+qualquer solicitação do usuário.
+
+
+
+----------
+
+
+Processamento de consultas distribuído: 
+
+Existem muitas formas de realizar consultas em sistemas
+distribuídos. Por exemplo, se o que se deseja é obter
+informações sobre os funcionários da ACME que
+recebem salários maiores do que 10.000,00 podem
+ser levantadas algumas possibilidades.
+
+– Assumindo que eu tenho dados distribuídos entre bases de
+dados de São Paulo e Porto Alegre
+
+Exemplificando
+SE a consulta for iniciada em São Paulo:
+1) Mover todas as linhas referentes aos funcionários que
+estão em POA para SÂO PAULO e executar a consulta
+2) Mover todas as linhas referentes aos funcionários que
+estão em SÃO PAULO para PORTO ALEGRE executar a
+consulta e retornar os resultados para SÃO PAULO
+3) Selecionar os funcionários de POA que recebem mais de
+10.000,00 e enviá-los para SÃO PAULO
+
+
+
+-------------
+
+
+
+Gerenciamento de transações distribuído:
+
+Em um SGBDD os mecanismos de controle de recuperação e de controle de concorrência
+deverão levar em consideração o fato de uma transação envolver não apenas os dados
+presentes em uma base de dados mas em várias.
+
+Independência do hardware. Não importa o hardware sobre o qual estão rodando as 
+diversas bases de dados que compõe um SGBDD.
+- Independência do sistema operacional. Não
+importa o sistema operacional sobre qual estão
+rodando os diversos SGBD que compõe um sistema
+distribuído
+- Indepêndencia da Rede. O SGBDD deve admitir a
+participação de uma variedade de redes de
+comunicação distintas
+- Independência do SGBD. Diferentes bancos de
+Dados (Ingres e Oracle) devem poder se comunicar
+de forma a participar de um SGBD distribuído.
+Normalmente estes componentes que permitem a
+comunicação entre diferentes SGBDs são
+denominados Gateways. Estes softwares podem ser
+considerados middleware no sentido de que são
+fragmentos de software que visam atenuar as
+diferenças entre sistemas distintos que necessitem
+operar em conjunto. Exemplos de softwares deste tipo
+são os chamados monitores TP.
+
+
+Cada nó possui:
+– 1 Gerenciador de transações
+– 1 Coordenador de transações
+
+Gerenciador de transações: gerencia as transações
+que fazem acesso a dados no nó local.
+– Mantém um log
+– Mantém um esquema para controle de concorrência.
+
+Coordenador de transações: coordena a execução de
+várias transações (locais e globais) iniciadas naquele nó
+– Inicia a execução da transação
+– Distribui as transações aos nós apropriados
+– Coordena a conclusão da transação
+
+
+* Uma transação é iniciada em um nó sendo
+distribuída a diversos nós para que seja
+executada, após isto, tem início o protocolo de
+2 fases. (Two-phase Commit – 2PC)
+
+
+
+
+
+
+
+
+------------------------------------------------------------------
+
+
+
+
+
+
+
+NoSQL:
+- Não é relacional, não usa SQL, ausência de esquema
+
+4 tipos:
+– Key-value (Redis)
+– Document (MongoDB, Elasticsearch)
+– Column (Cassandra)
+– Graph (Neo4j)
+
+
+
+
+KEY - VALUE:
+
+Key => total_de_alunos
+Value => 110
+– SET total_de_alunos 110
+– GET total_de_alunos
+
+
+Setar Vários pares chave-valor:
+MSET chave valor chave valor
+
+
+Múltiplos valores na mesma chave:
+HSET fulano "ano" "2017"
+HSET fulano "renda" "100.000,00"
+
+Remover:
+DEL
+HDEL
+
+
+
+--------------
+
+
+MONGO DB:
+Não tem as limitações dos BDs relacionais
+– Normalização 1FN, 2FN, 3FN
+
+Aplicações
+– Mensagens: comentários
+– Pedidos (histórico)
+
+
+Relacional     | MongoDB
+---------------|---------------
+banco de dados | banco de dados
+---------------|---------------
+tabela	       | coleção
+---------------|---------------
+tupla/linha    | document
+---------------|---------------
+coluna         | campo
+---------------|---------------
+
+Iniciando servidor:
+sudo systemctl start mongod.service
+
+ex:
+db.createCollection("pessoas"); //create table
+db.pessoas.insert({nome: "Fulano", idade:40})
+db.pessoas.insert({nome: "Siclano", idade:30})
+db.pessoas.insert({nome: "Beltrano"})
+db.pessoas.find();
+db.pessoas.find().pretty();
+show dbs
+show collections
+
+
+
+
+
+EX:
+Redis
+1) Escrever 1 comando para criar uma chave e associar a chave um valor
+SET teste 110
+
+2) Escrever 1 comando para recuperar o valor armazenado na chave
+GET teste
+
+3) Escrever 1 comando para criar uma segunda chave e armazenar um valor
+SET ola "mundo"
+
+4) Escrever um comando para ver as chaves criadas
+KEYS *
+
+
+
+Mongo
+1) Criar uma base de dados
+USE new_db
+
+2) Na base de dados crie duas coleções
+db.createCollection("Conta")
+db.createCollection("Banco")
+
+listar coleções (tabelas):
+show collections
+
+3) Em cada coleção insira pelo menos dois documentos. Cada documento deverá ter pelo menos 3 colunas
+db.Conta.insertOne({id: 1, numero: 345435, saldo: 3000})
+db.Conta.insertOne({id: 2, numero: 56567, saldo: 7000})
+
+db.createCollection("alunos")
+db.alunos.insert({"nome": "Fulano"})
+db.alunos.insert({"nome": "Siclano"})
+db.alunos.insert({"nome": "Beltrano"})
+db.alunos.insert({"nome": "Beltrano Outro"})
+
+4) Listar o conteúdo dos documentos
+db.Conta.find();
+db.Banco.find();
+
+
+
+
+outrs ex:
+db.pessoas.find({idade:30}).pretty()
+
+db.createCollection("cursos")
+
+db.cursos.insert({"nome curso": "Sistemas para Internet",
+"alunos_ids": [ObjectId("6667126a9584c14c41a26a16"),
+ObjectId("6667126a9584c14c41a26a17")]})
+
+db.cursos.insert(
+	{"nome curso":"Geoprocessamento",
+	"alunos_ids":[
+		ObjectId("5a0c8b73c043b41 c6c121f17"),
+		ObjectId("5a0c8b8bc043b41c6c121f19")
+	]}
+) 
+
+
+var result = db.cursos.findOne({"nome curso":"Sistemas para Internet"})
+
+db.cursos.insert(
+{"nome curso": "Geoprocessamento",
+"alunos":[{
+	"nome":"Beltrano", 
+	"email": "beltrano@ufsm.br",
+	"telefones": ["22222","33333"]
+	},
+	{
+	"nome":"Fulano",
+	"email": "fulano@ufsm.br",
+	"telefontes":["44444","55555"]}
+	]}
+) 
+
+
+*mongo aceita tudo, insert em cursos são diferentes, o que seria impossível com bancos SQL
+*relacionamento entre tabelas no mongo seria como na 1a forma colocando o id gerado, ou adicionando o aluno inteiro dentro do curso
+
+
+
