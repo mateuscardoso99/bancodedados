@@ -188,6 +188,36 @@ Fragmentação horizontal da tabela funcionário
 Uma operação de união (UNION) reúne os fragmentos
 
 
+exemplo:
+uma empresa possui 3 bases de dados, uma em SP, outra no RJ, outra no RS
+na tabela de estoque, os dados relativos ao RS ficam na base do RS, as de SP em SP, e as de RJ no RJ
+quando precisar trazer dados de estoque do RS vai na base do RS, quando precisar trazer tudo, faz UNION entre todas as tabelas
+as tabelas de produto e funcionário, como não serão atualizadas com tanta frequência podem ser replicadas igualmente em todas as bases
+a tabela de estoque por ser atualizada toda hora não é bom que seja replicada pois ao atualizar, teria que atualizar as 3 bases
+o melhor é fragmentar a tabela estoque, com dados dividos nas bases de dados e não replicar todos os dados em todas as bases
+
+-uma forma de fazer isso seria criar uma view que traz os dados de acordo com o estado
+
+
+
+
+
+
+
+
+Objetivos de um SGBDD
+- Autonomia Local. Os servidores que contém as BD devem ser tão autônomos quanto possível.
+- Não Dependência de um nó Central. Evita-se a formação de um gargalo e existe uma menor vulnerabilidade.
+- Operação Contínua. Os SGBDDs aumentam o grau de confiabilidade (a possibilidade de ocorrência de falhas é reduzido) e a disponibilidade (a probabilidade do sistema estar funcionando continuamente sem queda).
+- Independência de Localização. Os usuários não devem ter a necessidade de conhecer onde estão fisicamente armazenados os dados
+- Independência de Fragmentação. Os usuários irão ter uma visão dos dados que é uma visão na qual os fragmentos estão combinados logicamente por meio de junções e uniões adequadas. 
+É responsabilidade do SGBDD (mais particularmente do componente responsável pela execução/otimização das consultas) determinar a quais fragmentos é necessário ter acesso físico para satisfazer a qualquer solicitação do usuário
+
+
+
+
+
+
 ---------
 
 
@@ -295,8 +325,15 @@ executada, após isto, tem início o protocolo de
 2 fases. (Two-phase Commit – 2PC)
 
 
+Two-phase Commit – 2PC:
+o coordenador envia uma msg a cada participante pra verificar se todos os nós envolvidos na transação podem efetivar a transação
+se todos responderem positivo então o coordenador grava em seu log o resgistro da transação, e envia um pedido pra que os nós tbm façam isso
 
 
+Atualização de Réplicas:
+Cópia primária: apenas uma cópia é atualizada no momento da
+transação, ficando o nó que contém a cópia (réplica) primária
+encarregado de realizar a atualização das demais réplicas
 
 
 
