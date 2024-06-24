@@ -1,0 +1,24 @@
+Benchmark:
+Conjuntos padronizados de tarefas que ajudam a caracterizar o desempenho de SGDBs. 
+Eles são úteis para dar uma ideia aproximada dos
+requisitos de hardware e software
+
+OLTP:
+Processamento de Transações Online é um tipo de processamento de dados que consiste na 
+execução de várias transações que ocorrem simultaneamente (transações bancárias online, compras, 
+entrada de pedidos ou envio de mensagens de texto, por exemplo).
+
+OLAP:
+tecnologia de banco de dados que foi otimizada para consulta e relatório, em vez de processar transações.
+
+PGBench
+– Programa para rodar testes de benchmark no PostgreSQL
+
+Cria uma base de dados com as tabelas para o benchmark
+- createdb -Upostgres btesteben1
+- pgbench -Upostgres -i btesteben1
+
+Rodar benchmark
+- pgbench -Upostgres -c 4 -t 20000 btesteben1 //-c 4 = 4 clientes -t 20000 = número de transações de cada 
+
+retorna quanto tempo demora pra 4 clientes executarem 20000 transações cada, quantas transações são feitas por segundo
