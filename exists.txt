@@ -1,0 +1,74 @@
+A cláusula EXISTS faz uma verificação se existe algum resultado para a subquery informada. Caso haja, o resultado da consulta principal é exibido. 
+É muito comum sua utilização quando se deseja trazer resultados onde um valor específico existe dentro de outra tabela.
+
+onsidere a estrutura de tabelas abaixo, onde temos uma tabela chamada produto, responsável por armazenar todos os produtos do estoque do cliente, 
+a tabela categoria_produto, responsável por armazenar todas as categorias existentes no banco de dados, 
+e a tabela venda_produto, que relaciona os produtos que foram vendidos.
+
+tabela produto:
+id	nome	                  preco	  Id_categoria
+1	  Bola	                  35.00	  1
+2	  Patinete	              120.00	1
+3	  Carrinho	              15.00   1
+4	  Skate	                  296.00  1
+5	  Notebook	              3500.00	2
+6	  Monitor LG              450.00  2
+7	  O Diário de Anne Frank	45.00	  3
+
+Tabela categoria_produto:
+id	nome
+1	  Infantil
+2	  Informatica
+3	  Educacional
+
+Tabela venda_produto:
+id	id_produto	valor	  data
+1	  1	          35.00	  2018-05-15
+2	  1          	35.00	  2018-06-15
+3	  1	          35.00	  2018-07-15
+4	  2	          120.00  2018-07-15
+5	  2          	120.00  2018-07-14
+6	  3           15.00  	2018-07-15
+7	  7          	45.00  	2018-07-15
+8	  5	          3500.00	2018-07-16
+9 	5	          3500.00	2018-07-16
+10	6	          450.00	2018-07-16
+
+
+Suponhamos que seja necessário trazer em uma consulta na tabela de produtos, todos aqueles registros que tiveram alguma venda. Para isso podemos utilizar o EXISTS, que além de testar se a condição é verdadeira, 
+traz como retorno os dados da consulta. Observe a query abaixo:
+
+SELECT P.ID, P.nome FROM produto P
+WHERE EXISTS ( SELECT V.ID_PRODUTO FROM venda_produto V WHERE V.ID_PRODUTO = P.ID )
+//precisa ter uma referência da consulta externa dentro da consulta do exists, por isso o uso de P.ID dentro do exists
+
+Observe que no trecho de código acima, selecionamos o ID e o nome do produto, e em seguida, definimos que a consulta será feita na tabela produto, porém, com a condição de que 
+tenhamos um resultado true, ou seja, que a consulta que busque produtos que tenha sido vendidos na tabela venda_produto tenha encontrado pelo menos 1 produto. Caso encontre, esse resultado é entregue na consulta
+
+
+
+
+
+
+
+outro exemplo:
+SELECT
+P.id,
+P.titulo
+FROM
+projetos P
+WHERE
+EXISTS (
+  SELECT
+      C.id_projeto
+  FROM
+      comentario C
+  WHERE
+      C.id_projeto = P.id
+)
+
+Observe que selecionamos o id e o titulo do projeto e logo na Linha 7 utilizamos a cláusula EXISTS para verificar se existem valores no resultado da subquery
+realizamos uma subquery na tabela comentario, solicitando somente aqueles que o id do projeto seja igual ao campo id_projeto da tabela comentario.
+
+
+
