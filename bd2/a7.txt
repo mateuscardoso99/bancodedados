@@ -152,7 +152,7 @@ write(X)
 UNLOCK (X)
 ROLLBACK
 				LOCK-X (X)
-				read(X) leu 500
+				read(X) leu 1000
 
 
 
