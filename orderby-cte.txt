@@ -1,3 +1,4 @@
+--filtra um conjunto de dados
 WITH AGENDAMENTOS AS(
 	SELECT a.ID_AGENDAMENTO,
           a.MATRICULA,
@@ -26,7 +27,9 @@ WITH AGENDAMENTOS AS(
    --ORDER BY DT_REF_AGENDADA DESC, ID_AGENDAMENTO DESC
    OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
 ), 
+--pega os id_pessoa do conjunto de dados filtrado
 PESSOAS AS(SELECT ID_PESSOA FROM AGENDAMENTOS),
+--consulta a view fazendo join com os id_pessoa do conjunto de dados filtrado, impedindo de percorrer todas as 300 mil linhas de V_RU_USUARIOS
 USUARIO_RU AS(
 	SELECT u.ID_PESSOA,
           u.DT_NASCIMENTO,
@@ -41,11 +44,13 @@ USUARIO_RU AS(
    FROM DBSM.V_RU_USUARIOS u
    JOIN PESSOAS p ON p.ID_PESSOA = u.ID_PESSOA
 ),
+--como V_RU_USUARIOS tem várias linhas por pessoa, pega apenas a primeira
 FIRST_ROW_USUARIO_RU AS(
 	SELECT ID_PESSOA, DT_NASCIMENTO, DEFICIENCIA_ITEM
 	FROM USUARIO_RU
 	WHERE NUM_LINHA = 1
 )
+--retorna o conjunto de dados filtrado aplicando ordenação
 SELECT a.ID_AGENDAMENTO,
        a.MATRICULA,
        a.DT_REF_AGENDADA,
@@ -60,10 +65,13 @@ SELECT a.ID_AGENDAMENTO,
        u.DEFICIENCIA_ITEM
 FROM AGENDAMENTOS a
 LEFT JOIN FIRST_ROW_USUARIO_RU u ON u.ID_PESSOA = a.ID_PESSOA
-ORDER BY /*DT_REF_AGENDADA DESC*/
-CASE WHEN (u.DT_NASCIMENTO IS NOT NULL AND u.DT_NASCIMENTO <= '1967-01-01')
-            OR (u.DEFICIENCIA_ITEM IS NOT NULL AND u.DEFICIENCIA_ITEM <> 5)
-            THEN 0 ELSE 1 END DESC, ID_AGENDAMENTO DESC
+ORDER BY 
+	CASE 
+		WHEN (u.DT_NASCIMENTO IS NOT NULL AND u.DT_NASCIMENTO <= '1967-01-01')
+    	OR (u.DEFICIENCIA_ITEM IS NOT NULL AND u.DEFICIENCIA_ITEM <> 5)
+        THEN 0 ELSE 1 
+	END DESC, 
+	ID_AGENDAMENTO DESC
 
 -------------------------------
 
