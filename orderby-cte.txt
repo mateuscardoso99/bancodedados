@@ -1,0 +1,318 @@
+WITH AGENDAMENTOS AS(
+	SELECT a.ID_AGENDAMENTO,
+          a.MATRICULA,
+          a.DT_REF_AGENDADA,
+          a.ID_PESSOA,
+          COALESCE(P.NOME_SOCIAL_UP, P.NOME_PESSOA_UP) AS NOME_PESSOA,
+          te.DESCRICAO AS TIPO_REFEICAO,
+          r.IND_REALIZADA
+   FROM DBSM.RU_AGENDAMENTOS a
+   JOIN dbsm.PESSOAS p ON p.ID_PESSOA = a.ID_PESSOA
+   JOIN dbsm.TAB_ESTRUTURADA te ON te.COD_TABELA = a.TIPO_REFEICAO_TAB
+   AND te.ITEM_TABELA = a.TIPO_REFEICAO_ITEM
+   LEFT JOIN dbsm.RU_REFEICOES r ON r.ID_REFEICAO = a.ID_REFEICAO
+   WHERE a.TIPO_REFEICAO_ITEM IN (2)
+     AND a.ID_RESTAURANTE = '1'
+     AND a.DT_REF_AGENDADA BETWEEN '2024-10-14' AND '2024-10-14'
+     AND a.IND_ATIVO = 'A'
+     AND r.IND_REALIZADA = 'S'
+     AND EXISTS (
+     	SELECT 1
+        FROM DBSM.V_RU_USUARIOS u
+        WHERE u.ID_PESSOA = a.ID_PESSOA
+        AND ((u.DT_NASCIMENTO IS NOT NULL AND u.DT_NASCIMENTO <= '1967-01-01')
+        	OR (u.DEFICIENCIA_ITEM IS NOT NULL AND u.DEFICIENCIA_ITEM <> 5))
+     )
+   --ORDER BY DT_REF_AGENDADA DESC, ID_AGENDAMENTO DESC
+   OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
+), 
+PESSOAS AS(SELECT ID_PESSOA FROM AGENDAMENTOS),
+USUARIO_RU AS(
+	SELECT u.ID_PESSOA,
+          u.DT_NASCIMENTO,
+          u.DEFICIENCIA_ITEM,
+          ROW_NUMBER() OVER (
+          	PARTITION BY u.ID_PESSOA
+            ORDER BY 
+            	CASE WHEN u.ORIGEM LIKE 'ID_%' THEN 0 ELSE 1 END ASC, 
+            	CASE WHEN (u.DEFICIENCIA_ITEM <> 5 AND u.DEFICIENCIA_ITEM IS NOT NULL) THEN 0 ELSE 1 END ASC, 
+           		u.ID_ORIGEM DESC
+          ) AS NUM_LINHA
+   FROM DBSM.V_RU_USUARIOS u
+   JOIN PESSOAS p ON p.ID_PESSOA = u.ID_PESSOA
+),
+FIRST_ROW_USUARIO_RU AS(
+	SELECT ID_PESSOA, DT_NASCIMENTO, DEFICIENCIA_ITEM
+	FROM USUARIO_RU
+	WHERE NUM_LINHA = 1
+)
+SELECT a.ID_AGENDAMENTO,
+       a.MATRICULA,
+       a.DT_REF_AGENDADA,
+       a.NOME_PESSOA,
+       a.TIPO_REFEICAO,
+       a.IND_REALIZADA,
+       CASE
+           WHEN u.DT_NASCIMENTO IS NOT NULL
+                AND u.DT_NASCIMENTO <= '1967-01-01' THEN 1
+           ELSE 0
+       END AS IS_IDOSO,
+       u.DEFICIENCIA_ITEM
+FROM AGENDAMENTOS a
+LEFT JOIN FIRST_ROW_USUARIO_RU u ON u.ID_PESSOA = a.ID_PESSOA
+ORDER BY /*DT_REF_AGENDADA DESC*/
+CASE WHEN (u.DT_NASCIMENTO IS NOT NULL AND u.DT_NASCIMENTO <= '1967-01-01')
+            OR (u.DEFICIENCIA_ITEM IS NOT NULL AND u.DEFICIENCIA_ITEM <> 5)
+            THEN 0 ELSE 1 END DESC, ID_AGENDAMENTO DESC
+
+-------------------------------
+
+qual seria a diferença de ordenar só final como vc mostrou de ordenar dentro da CTE? ordenar no final seria por exemplo pegar 1000 linhas, ordena-las e depois pegar as 10 primeiras e ordenar dentro da cte seria pegar 10 linhas ordena-las e o restante é ignorado?
+
+Isso mesmo! Você entendeu a diferença principal. 👍 Só tem um detalhe importante: não é apenas onde você escreve o ORDER BY, mas em que momento a paginação (OFFSET/FETCH) é aplicada em relação à ordenação.
+
+Vamos usar seu exemplo com 1.000 registros e uma página de 10 registros, pulando os primeiros 20.
+
+1. Ordenar no final, depois de buscar todos os registros
+SELECT *
+FROM AGENDAMENTOS
+ORDER BY PRIORIDADE ASC, ID_AGENDAMENTO DESC
+OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY;
+O resultado lógico é:
+1. Considera os 1.000 registros
+Aplica os filtros da consulta.
+
+2. Ordena pela prioridade
+Prioritários primeiro, demais depois.
+
+3. Aplica a paginação
+Ignora os 20 primeiros e retorna os 10 seguintes.
+
+Assim, os registros prioritários têm a oportunidade de aparecer nas primeiras páginas, mesmo que originalmente estivessem no fim dos resultados.
+
+
+
+
+2. Paginar dentro da CTE e ordenar no final
+WITH AGENDAMENTOS AS (
+    SELECT *
+    FROM TABELA
+    OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
+)
+SELECT *
+FROM AGENDAMENTOS
+ORDER BY PRIORIDADE ASC, ID_AGENDAMENTO DESC;
+O resultado lógico é:
+
+1. Considera os registros filtrados
+Ainda não existe garantia de prioridade na seleção.
+
+2. Seleciona 10 registros após pular 20
+Os demais registros ficam fora dessa página.
+
+3. Ordena somente os 10 selecionados
+Os prioritários que ficaram de fora não podem entrar nessa página.
+
+Há uma ressalva: sem um ORDER BY dentro da CTE, o banco não garante quais 10 registros serão selecionados. Portanto, eles podem nem sequer ser os mesmos de uma execução para outra.
+
+
+
+
+3. E quanto ao desempenho?
+Ordenar no final pode exigir que o banco processe e ordene um conjunto muito maior de registros. Isso pode custar mais processamento e memória, principalmente com muitos dados.
+
+Já ordenar antes da paginação permite selecionar a página correta por prioridade, mas o banco ainda pode precisar processar e ordenar muitos registros para conseguir isso. Índices adequados podem ajudar.
+
+No seu caso, a regra correta é: filtrar os registros, determinar a prioridade, ordenar o conjunto inteiro e só então aplicar OFFSET/FETCH.
+
+E uma última observação: no seu SQL original, o EXISTS exclui pessoas não prioritárias. Se você quer que elas apareçam nas páginas seguintes, também precisa remover esse filtro.
+
+
+---------------------------
+
+não entendi essa parte: "Há uma ressalva: sem um ORDER BY dentro da CTE, o banco não garante quais 10 registros serão selecionados. Portanto, eles podem nem sequer ser os mesmos de uma execução para outra"
+
+Essa parte é muito importante para entender como o banco de dados funciona.
+
+O ponto principal é: o banco de dados não garante uma ordem natural dos registros. Mesmo que você insira os dados em uma determinada sequência, não significa que ele vai devolvê-los nessa mesma sequência.
+
+Vamos imaginar que você tenha estes registros:
+
+ID_AGENDAMENTO Prioritário? 
+101  Não
+102  Sim
+103  Não
+104  Sim
+105  Não
+106  Sim
+107  Não
+108  Sim
+
+
+1. Sem ORDER BY dentro da CTE
+Imagine esta consulta:
+WITH AGENDAMENTOS AS (
+    SELECT *
+    FROM TABELA
+    OFFSET 2 ROWS FETCH NEXT 3 ROWS ONLY
+)
+SELECT *
+FROM AGENDAMENTOS
+ORDER BY PRIORIDADE DESC;
+
+Você pode pensar que o banco vai pegar os registros 103, 104 e 105. Mas isso não é garantido, porque não existe uma ordenação definida antes da paginação.
+Ele poderia selecionar outros três registros, dependendo do plano de execução, dos índices, das alterações nos dados ou de outros fatores.
+O ORDER BY PRIORIDADE DESC do lado de fora só ordena os três registros que já foram selecionados. Ele não volta à tabela para procurar registros prioritários que ficaram de fora.
+
+
+
+2. Com ORDER BY dentro da CTE
+Agora veja:
+WITH AGENDAMENTOS AS (
+    SELECT *
+    FROM TABELA
+    ORDER BY PRIORIDADE DESC, ID_AGENDAMENTO DESC
+    OFFSET 2 ROWS FETCH NEXT 3 ROWS ONLY
+)
+SELECT *
+FROM AGENDAMENTOS;
+
+Agora você definiu uma ordem antes de selecionar a página.
+O banco primeiro organiza os registros por prioridade e ID e, em seguida, pula dois e seleciona três.
+Assim, a seleção da página é previsível, desde que os dados não mudem e os critérios de ordenação sejam suficientes para desempatar os registros.
+
+
+3. Por que isso importa na sua consulta?
+Na sua consulta original, você tinha:
+OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
+
+dentro da CTE, sem uma ordenação efetiva antes da paginação.
+Isso significa que você selecionava uma página de 10 registros sem garantir que ela contivesse os prioritários que deveriam aparecer primeiro.
+A forma correta é definir a prioridade antes da paginação, por exemplo:
+
+ORDER BY
+    CASE
+        WHEN (
+            u.DT_NASCIMENTO IS NOT NULL
+            AND u.DT_NASCIMENTO <= DATE '1967-01-01'
+        )
+        OR (
+            u.DEFICIENCIA_ITEM IS NOT NULL
+            AND u.DEFICIENCIA_ITEM <> 5
+        )
+        THEN 0
+        ELSE 1
+    END ASC,
+    a.ID_AGENDAMENTO DESC
+OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY;
+Esse ORDER BY precisa estar na consulta que efetivamente faz a paginação, e não somente na consulta externa.
+
+Resumindo: sem ORDER BY, o banco pode escolher qualquer conjunto de registros para a página. Com ORDER BY antes do OFFSET/FETCH, ele seleciona os registros de acordo com a ordem que você definiu
+
+
+--------------------
+
+
+entendi, mas qual a diferença do order by dentro do CTE para o orderby só no final e para orderby em ambas?
+
+Existem três cenários, e a diferença está principalmente em quais registros entram na página e em qual ordem eles são devolvidos.
+Vamos considerar sua consulta com 1.000 registros, pulando os primeiros 20 e retornando os próximos 10.
+
+1. ORDER BY somente dentro da CTE:
+WITH AGENDAMENTOS AS (
+    SELECT *
+    FROM TABELA
+    ORDER BY PRIORIDADE ASC, ID_AGENDAMENTO DESC
+    OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
+)
+SELECT *
+FROM AGENDAMENTOS;
+
+O que acontece:
+Ordena os 1.000 registros por prioridade.
+Pula os primeiros 20 e seleciona os próximos 10.
+Retorna esses 10 registros, mas a consulta externa não garante a ordem final do resultado.
+Ou seja, a seleção da página considera a prioridade, mas a ordem de apresentação dos registros não fica garantida pela consulta externa.
+
+
+2. ORDER BY somente no final
+WITH AGENDAMENTOS AS (
+    SELECT *
+    FROM TABELA
+)
+SELECT *
+FROM AGENDAMENTOS
+ORDER BY PRIORIDADE ASC, ID_AGENDAMENTO DESC
+OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY;
+
+O que acontece:
+A CTE não faz a paginação.
+A consulta final ordena o conjunto de registros.
+Só depois pula os 20 primeiros e retorna os 10 seguintes.
+Esse formato seleciona a página correta por prioridade e também garante a ordem do resultado.
+
+
+3. ORDER BY dentro da CTE e no final
+WITH AGENDAMENTOS AS (
+    SELECT *
+    FROM TABELA
+    ORDER BY PRIORIDADE ASC, ID_AGENDAMENTO DESC
+    OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
+)
+SELECT *
+FROM AGENDAMENTOS
+ORDER BY PRIORIDADE ASC, ID_AGENDAMENTO DESC;
+
+O que acontece:
+A CTE ordena e seleciona os 10 registros da página.
+A consulta externa ordena novamente esses 10 registros.
+O resultado final tem a ordem garantida.
+Nesse caso, a ordenação externa é redundante para a seleção da página, mas garante a ordem de apresentação. Como os mesmos critérios foram usados nas duas ordenações, normalmente ela não muda a sequência dos registros.
+
+
+Comparação rápida
+Cenário                          Página selecionada por prioridade?  Ordem final garantida?
+
+ORDER BY só na CTE                Sim                                Não
+ORDER BY só no final              Sim                                Sim
+ORDER BY nos dois                 Sim                                Sim
+
+---------------------------------
+
+
+mas ordenar só no final vai fazer com que se tiver 30000 registros tudo isso seja ordenado antes da paginação? se tiver orderby em ambos isso não aconteria?
+Sim! Você chegou exatamente na questão de desempenho. Mas existe um detalhe importante: colocar ORDER BY nos dois lugares não evita, por si só, que o banco precise ordenar os 30.000 registros.
+
+Vamos usar seu exemplo.
+1. ORDER BY somente no final:
+WITH AGENDAMENTOS AS (
+    SELECT *
+    FROM TABELA
+)
+SELECT *
+FROM AGENDAMENTOS
+ORDER BY PRIORIDADE, ID_AGENDAMENTO DESC
+OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY;
+
+O banco precisa encontrar os registros que atendem aos filtros e determinar quais são os primeiros na ordenação para conseguir retornar a página correta.
+Se houver 30.000 registros, ele poderá precisar processar todos eles para determinar quais 10 registros devem ser retornados. Isso não significa necessariamente ordenar materialmente todos os 30.000: o otimizador pode usar índices ou outras estratégias para reduzir o trabalho.
+
+
+2. ORDER BY dentro da CTE e no final:
+WITH AGENDAMENTOS AS (
+    SELECT *
+    FROM TABELA
+    ORDER BY PRIORIDADE, ID_AGENDAMENTO DESC
+    OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY
+)
+SELECT *
+FROM AGENDAMENTOS
+ORDER BY PRIORIDADE, ID_AGENDAMENTO DESC;
+
+Aqui, a CTE ordena os registros para escolher os 10 corretos. Depois, a consulta externa ordena esses 10 registros.
+O problema é que a primeira ordenação continua precisando considerar os candidatos da tabela inteira para saber quais registros pertencem à página. A segunda ordenação trabalha com apenas 10 registros, mas isso não elimina o custo da primeira.
+
+
+
+
+
